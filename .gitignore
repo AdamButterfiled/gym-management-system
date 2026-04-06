@@ -28,3 +28,12 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+.history/
+target/
+build/
+*.class
+*.jar
+*.jar.original
+*.war
+*.nar
+*.ear
