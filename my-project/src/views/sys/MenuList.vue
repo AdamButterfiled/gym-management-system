@@ -1,52 +1,77 @@
 <template>
   <div class="menu-list-page">
-    <!-- 搜索栏 -->
-    <GlassCard variant="search">
-       <a-form layout="inline" style="padding-top: 0px;">
-           <div style="margin-left: 14px;">
-               <div style="color:#867E7E;">菜单名称</div>
-               <StandardInput 
-                  v-model:value="searchText" 
-                  placeholder="请输入菜单标题" 
-                  class="input-1" 
-                  variant="grey"
-                  @keydown.enter="loadData" 
-               />
-           </div>
-           <a-form-item style="margin-left: 40px; margin-top: 30px;">
-               <StandardButton type="search" icon="search" @click="loadData">搜索</StandardButton>
-               <StandardButton type="reset" icon="reload" @click="searchText = ''; loadData()">重置</StandardButton>
-           </a-form-item>
-       </a-form>
-    </GlassCard>
-
-    <!-- 表格区域 -->
-    <GlassCard variant="table">
-        <a-space class="menu-table-toolbar" style="margin-bottom: 20px;">
-            <StandardButton type="add" icon="plus" @click="handleAdd(null)">
-                新增顶级菜单
+    <div class="menu-page-header">
+      <h1 class="menu-page-title">菜单权限管理</h1>
+      <div class="menu-page-controls">
+        <div class="menu-search-row">
+          <StandardInput
+            v-model:value="searchText"
+            width="250px"
+            placeholder="搜索菜单标题"
+            class="menu-search-input"
+            @pressEnter="loadData"
+          >
+            <template #prefix>
+              <SearchOutlined />
+            </template>
+          </StandardInput>
+          <div class="menu-search-actions">
+            <StandardButton
+              type="search"
+              icon="search"
+              @click="loadData"
+            >
+              查询
             </StandardButton>
-            <a-button class="menu-toolbar-button" @click="expandAll" style="margin-left: 10px;">
-                <MenuUnfoldOutlined /> 全部展开
-            </a-button>
-            <a-button class="menu-toolbar-button" @click="collapseAll" style="margin-left: 10px;">
-                <MenuFoldOutlined /> 全部折叠
-            </a-button>
-        </a-space>
+            <StandardButton
+              type="reset"
+              icon="reload"
+              @click="resetSearch"
+            >
+              重置
+            </StandardButton>
+          </div>
+        </div>
 
-        <!-- 树形表格 -->
-        <StandardTable :configStyle="currentStyle" 
-           
+        <div class="menu-table-toolbar" role="toolbar" aria-label="菜单操作">
+          <StandardButton
+            type="add"
+            class="menu-native-button menu-control-button menu-toolbar-button menu-toolbar-button--add menu-button-animated menu-button-animated--add"
+            icon="plus"
+            @click="handleAdd(null)"
+          >
+            新增顶级菜单
+          </StandardButton>
+          <StandardButton
+            type="default"
+            class="menu-native-button menu-control-button menu-toolbar-button menu-toolbar-button--toggle menu-button-animated menu-button-animated--toggle"
+            :class="{ 'is-expanded': isAllExpanded }"
+            :aria-label="isAllExpanded ? '全部折叠' : '全部展开'"
+            @click="toggleExpandAll"
+          >
+            <template #icon>
+              <component :is="isAllExpanded ? FoldVertical : UnfoldVertical" :size="16" class="menu-toggle-lucide" />
+            </template>
+            {{ isAllExpanded ? '全部折叠' : '全部展开' }}
+          </StandardButton>
+        </div>
+      </div>
+    </div>
+
+    <GlassCard variant="table">
+      <section class="workspace-subsection">
+        <StandardTable
+            class="openai-table"
+            :configStyle="currentStyle"
             :dataSource="tableData" 
             :columns="columns" 
             :pagination="false"
             rowKey="id"
-            :scroll="{ x: 1000 }"
+            :scroll="{ x: 1380 }"
             v-model:expandedRowKeys="expandedRowKeys"
         >
             <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'icon'">
-                    <!-- 使用 iconMap 动态渲染图标 -->
                     <component :is="iconMap[record.icon]" v-if="record.icon && iconMap[record.icon]" style="font-size: 16px;"/>
                     <span v-else>{{ record.icon || '-' }}</span>
                 </template>
@@ -68,25 +93,31 @@
                  </template>
 
                 <template v-if="column.key === 'action'">
-                    <a-space class="menu-action-group" :size="8">
-                        <a-button type="text" class="table-glass-action table-glass-action--primary" @click="handleAdd(record)">新增子菜单</a-button>
-                        <a-button type="text" class="table-glass-action table-glass-action--accent" @click="handleEdit(record)">编辑</a-button>
+                    <a-space class="menu-action-group" :size="16">
+                        <StandardButton type="link" size="sm" class="table-glass-action table-glass-action--primary" @click="handleAdd(record)">新增子菜单</StandardButton>
+                        <StandardButton type="link" size="sm" class="table-glass-action table-glass-action--accent" @click="handleEdit(record)">编辑</StandardButton>
                         <a-popconfirm title="确定删除吗?" @confirm="handleDelete(record.id)">
-                            <a-button type="text" class="table-glass-action table-glass-action--danger">删除</a-button>
+                            <StandardButton type="link" size="sm" danger class="table-glass-action table-glass-action--danger">删除</StandardButton>
                         </a-popconfirm>
                     </a-space>
                 </template>
             </template>
         </StandardTable>
+      </section>
     </GlassCard>
 
-    <!-- 新增/编辑 弹窗 -->
     <StandardModal
       v-model:visible="modalVisible"
       :title="modalTitle"
+      :body-style="{ paddingTop: '30px', paddingBottom: '18px' }"
       @ok="handleModalOk"
     >
-      <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
+      <a-form
+        :model="formState"
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 16 }"
+        class="workspace-modal-form menu-config-form"
+      >
          <a-form-item label="父级菜单">
              <!-- 使用 TreeSelect 实现树形选择 -->
              <a-tree-select
@@ -135,8 +166,8 @@
          </a-form-item>
          
          <!-- 新增：表格样式配置 -->
-         <a-form-item label="表格样式" :extra="isGlobalTraditional ? '经典风格下此选项已禁用' : '子菜单优先于父菜单配置'">
-             <a-tooltip :title="isGlobalTraditional ? '当前为经典风格，玻璃效果已全局关闭' : ''">
+         <a-form-item label="表格样式" :extra="isGlobalTraditional ? '经典风格下此选项已禁用，页面使用统一页壳外观' : '子菜单优先于父菜单配置'">
+             <a-tooltip :title="isGlobalTraditional ? '当前为经典风格，表格将跟随统一的经典页面风格' : ''">
                <a-radio-group v-model:value="formState.componentStyle" :disabled="isGlobalTraditional">
                 <a-radio-button :value="null">继承</a-radio-button>
                 <a-radio-button value="glass">透明玻璃</a-radio-button>
@@ -168,16 +199,17 @@ import {
     UserOutlined, SettingOutlined, AppstoreOutlined, EnvironmentOutlined,
     ToolOutlined, CalendarOutlined, TeamOutlined, ScheduleOutlined,
     UserSwitchOutlined, WarningOutlined, FolderOutlined, FileOutlined,
-    HomeOutlined, MenuUnfoldOutlined, MenuFoldOutlined
+    HomeOutlined, FormOutlined, SearchOutlined
 } from '@ant-design/icons-vue';
+import { FoldVertical, UnfoldVertical } from 'lucide-vue-next';
 import request from '@/request';
 import { usePageStyle } from '@/hooks/usePageStyle';
 import { useStore } from 'vuex';
 
 // Shared Components
 import GlassCard from '@/components/common/GlassCard.vue';
-import StandardInput from '@/components/common/StandardInput.vue';
 import StandardButton from '@/components/common/StandardButton.vue';
+import StandardInput from '@/components/common/StandardInput.vue';
 import StandardTable from '@/components/common/StandardTable.vue';
 import StandardModal from '@/components/common/StandardModal.vue';
 
@@ -195,7 +227,8 @@ const iconMap: Record<string, any> = {
   WarningOutlined,
   SettingOutlined,
   FolderOutlined,
-  FileOutlined
+  FileOutlined,
+  FormOutlined
 };
 
 interface Menu {
@@ -226,6 +259,10 @@ const { currentStyle, loadMenuConfig } = usePageStyle();
 // Global theme
 const __store = useStore();
 const isGlobalTraditional = computed(() => __store.state.themeSettings?.styleMode === 'traditional');
+const isAllExpanded = computed(() => {
+    if (allIds.value.length === 0) return false;
+    return allIds.value.every(id => expandedRowKeys.value.includes(id));
+});
 
 const expandAll = () => {
     expandedRowKeys.value = [...allIds.value];
@@ -233,6 +270,15 @@ const expandAll = () => {
 
 const collapseAll = () => {
     expandedRowKeys.value = [];
+};
+
+const toggleExpandAll = () => {
+    if (isAllExpanded.value) {
+        collapseAll();
+        return;
+    }
+
+    expandAll();
 };
 
 const formState = reactive<Menu>({
@@ -249,14 +295,14 @@ const formState = reactive<Menu>({
 });
 
 const columns = [
-  { title: '菜单标题', dataIndex: 'title', key: 'title', width: 200 },
-  { title: '图标', dataIndex: 'icon', key: 'icon', width: 80, align: 'center' },
-  { title: '路由路径', dataIndex: 'path', key: 'path' },
-  { title: '组件路径', dataIndex: 'component', key: 'component' },
-  { title: '样式配置', dataIndex: 'componentStyle', key: 'componentStyle', width: 120 },
-  { title: '排序', dataIndex: 'sort', key: 'sort', width: 60 },
-  { title: '权限', dataIndex: 'roles', key: 'roles' },
-  { title: '操作', key: 'action', width: 250, fixed: 'right' },
+  { title: '菜单标题', dataIndex: 'title', key: 'title', width: 280 },
+  { title: '图标', dataIndex: 'icon', key: 'icon', width: 72, align: 'center' },
+  { title: '路由路径', dataIndex: 'path', key: 'path', width: 188 },
+  { title: '组件路径', dataIndex: 'component', key: 'component', width: 198 },
+  { title: '样式配置', dataIndex: 'componentStyle', key: 'componentStyle', width: 132, align: 'center' },
+  { title: '排序', dataIndex: 'sort', key: 'sort', width: 72, align: 'center' },
+  { title: '权限', dataIndex: 'roles', key: 'roles', width: 220 },
+  { title: '操作', key: 'action', width: 220, fixed: 'right' },
 ];
 
 // 构建 TreeSelect 数据源 (需要 deep copy 避免影响 tableData)
@@ -266,7 +312,7 @@ const treeData = computed(() => {
 
 // 图标搜索过滤
 const filterIconOption = (input: string, option: any) => {
-  return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+  return String(option?.value || '').toLowerCase().includes(input.toLowerCase());
 };
 
 const splitRoles = (roles?: string) => {
@@ -317,33 +363,29 @@ const loadData = () => {
     request.get("/menu/list").then((res: any) => {
         if(res.code === 200) {
             const fullList = res.data;
-            
-            // 2. Filter for view
             let list = fullList;
-            if(searchText.value) {
+
+            if (searchText.value) {
                 const keyword = searchText.value.toLowerCase();
                 list = list.filter((item: Menu) => item.title.toLowerCase().includes(keyword));
             }
-            
-            // 3. Build view tree
-            const tree = buildTree(list);
-            tableData.value = tree;
-            
-            // 4. Default Expansion Logic
+
+            tableData.value = buildTree(list);
+            allIds.value = list.map((item: Menu) => item.id);
+
             if (searchText.value) {
-                 allIds.value = list.map((item: Menu) => item.id);
-                 expandedRowKeys.value = [...allIds.value];
+                expandedRowKeys.value = [...allIds.value];
             } else {
-                 const rootNode = list.find((item: Menu) => item.id === 999 || item.title === '系统主菜单');
-                 if (rootNode) {
-                     expandedRowKeys.value = [rootNode.id];
-                 } else {
-                     expandedRowKeys.value = [];
-                 }
-                 allIds.value = list.map((item: Menu) => item.id);
+                const rootNode = list.find((item: Menu) => item.id === 999 || item.title === '系统主菜单');
+                expandedRowKeys.value = rootNode ? [rootNode.id] : [];
             }
         }
     });
+};
+
+const resetSearch = () => {
+    searchText.value = '';
+    loadData();
 };
 
 const handleAdd = (parent: Menu | null) => {
@@ -405,12 +447,351 @@ onMounted(() => {
 </script>
 
 <style scoped>
+ .menu-list-page {
+     --menu-search-bg: #ffffff;
+     --menu-search-border: rgba(17, 17, 17, 0.12);
+     --menu-search-border-strong: rgba(17, 17, 17, 0.22);
+     --menu-search-placeholder: rgba(17, 17, 17, 0.38);
+     --menu-search-icon: rgba(17, 17, 17, 0.34);
+     --menu-search-icon-active: rgba(17, 17, 17, 0.58);
+     --menu-control-height: 40px;
+     --menu-search-input-height: 44px;
+     --menu-control-width: 112px;
+     --menu-content-visual-offset: 10px;
+     --menu-tree-icon-size: 16px;
+     --menu-tree-icon-bar-length: 10px;
+     --menu-tree-icon-stroke: 1.5px;
+     --menu-tree-icon-duration: 0.28s;
+     --menu-tree-icon-ease: cubic-bezier(0.22, 1, 0.36, 1);
+     padding-top: 2px;
+ }
+
+ .menu-page-header {
+     display: flex;
+     flex-direction: column;
+     align-items: flex-start;
+     gap: 26px;
+     width: 100%;
+     margin-top: 0;
+     margin-bottom: 40px;
+     padding-top: 2px;
+  }
+
+ .menu-page-title {
+     margin: 0;
+     display: inline-block;
+     color: var(--mono-text);
+     font-size: clamp(21px, 1.65vw, 26px);
+     line-height: 1.06;
+     font-weight: 700;
+     letter-spacing: -0.01em;
+     text-rendering: optimizeLegibility;
+     -webkit-font-smoothing: antialiased;
+     font-synthesis: none;
+     transform: translate(-6px, -11px);
+ }
+
+ .menu-page-controls {
+     display: flex;
+     flex-direction: column;
+     align-items: flex-start;
+     gap: 48px;
+     width: 100%;
+     max-width: 100%;
+     padding-bottom: 4px;
+     position: relative;
+     top: var(--menu-content-visual-offset);
+  }
+
+ .menu-search-row {
+     display: flex;
+     align-items: center;
+     gap: 14px !important;
+     flex-wrap: wrap;
+     width: 100%;
+     max-width: 100%;
+     padding: 0;
+     border-radius: 0;
+     background: transparent;
+     margin-top: 24px;
+     margin-bottom: -24px;
+     position: relative;
+     top: -10px;
+  }
+
+ .menu-search-actions {
+     display: flex;
+     align-items: center;
+     align-self: center;
+     gap: 10px !important;
+     flex-wrap: wrap;
+     margin-left: 4px !important;
+  }
+
+ .menu-search-actions > * {
+     flex: 0 0 auto;
+ }
+
+ .menu-search-input {
+     flex: 0 1 250px;
+     width: 250px;
+     max-width: min(100%, 250px);
+  }
+
+ .menu-list-page :deep(.standard-input-wrapper.menu-search-input),
+ .menu-list-page :deep(.standard-input-wrapper.menu-search-input.has-margin) {
+     margin-top: 0 !important;
+     display: flex;
+     align-items: stretch;
+     height: var(--menu-search-input-height);
+     min-height: var(--menu-search-input-height);
+  }
+
+ .menu-list-page :deep(.standard-input-wrapper.menu-search-input .std-input) {
+     box-sizing: border-box !important;
+     background: var(--menu-search-bg) !important;
+     border: 1px solid var(--menu-search-border) !important;
+     min-height: 100% !important;
+     height: 100% !important;
+     border-radius: 999px !important;
+     box-shadow: none !important;
+     transition: border-color 0.18s ease, background 0.18s ease !important;
+  }
+
+ .menu-list-page :deep(.menu-search-input .std-input-inner) {
+     padding: 0 14px !important;
+     gap: 8px;
+ }
+
+ .menu-list-page :deep(.menu-search-input .std-input:hover) {
+     border-color: var(--menu-search-border-strong) !important;
+     background: #ffffff !important;
+  }
+
+ .menu-list-page :deep(.menu-search-input .std-input:focus),
+ .menu-list-page :deep(.menu-search-input .std-input:focus-within) {
+     border-color: var(--menu-search-border-strong) !important;
+     background: #ffffff !important;
+     box-shadow: none !important;
+  }
+
+ .menu-list-page :deep(.menu-search-input .std-input-control) {
+     background: transparent !important;
+ }
+
+ .menu-list-page :deep(.menu-search-input .std-input-control::placeholder),
+ .menu-list-page :deep(.menu-search-input::placeholder) {
+     color: var(--menu-search-placeholder) !important;
+     font-weight: 500;
+  }
+
+ .menu-list-page :deep(.menu-search-input .std-input-control) {
+     font-size: 13px;
+     font-weight: 500;
+     line-height: 1 !important;
+     letter-spacing: -0.01em;
+  }
+
+ .menu-list-page :deep(.menu-search-input .std-input-prefix) {
+     margin-right: 8px;
+     color: var(--menu-search-icon) !important;
+     font-size: 14px;
+     transition: color 0.22s ease;
+  }
+
+ .menu-search-actions :deep(.std-button) {
+     --std-button-label-shift: 1px;
+     min-width: 92px;
+     height: 38px;
+     min-height: 38px;
+     padding-inline: 14px !important;
+ }
+
+ .menu-search-actions :deep(.std-button .std-button-label) {
+     font-size: 14px !important;
+     font-weight: 500 !important;
+     line-height: 1 !important;
+ }
+
+ .menu-search-actions :deep(.std-button--icon-text .std-button-label) {
+     transform: translateY(var(--std-button-label-shift)) !important;
+ }
+
+ .menu-search-actions :deep(.std-button .std-button-icon),
+ .menu-search-actions :deep(.std-button svg) {
+     width: 15px;
+     height: 15px;
+ }
+
+ .menu-list-page :deep(.menu-search-input .std-input:hover .std-input-prefix),
+ .menu-list-page :deep(.menu-search-input .std-input:focus-within .std-input-prefix) {
+     color: var(--menu-search-icon-active) !important;
+  }
+
+ .menu-native-button {
+     appearance: none;
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     position: relative;
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     gap: 8px;
+     margin: 0;
+     padding: 0 16px;
+     height: var(--menu-control-height);
+     min-height: var(--menu-control-height);
+     border-radius: 999px;
+     box-shadow: none;
+     outline: none;
+     cursor: pointer;
+     white-space: nowrap;
+     text-align: center;
+     line-height: 1;
+     text-decoration: none;
+     vertical-align: middle;
+     background-image: none;
+     -webkit-tap-highlight-color: transparent;
+     transition: border-color 0.24s ease, background-color 0.24s ease, color 0.24s ease;
+ }
+
+ .menu-native-button::before,
+ .menu-native-button::after {
+     content: none !important;
+     display: none !important;
+ }
+
+.menu-native-button.menu-control-button {
+    width: var(--menu-control-width);
+    min-width: var(--menu-control-width);
+}
+
+.menu-table-toolbar .menu-native-button.menu-toolbar-button.menu-toolbar-button--add {
+     width: auto;
+     min-width: 0;
+     padding-inline: 16px 18px;
+  }
+
+ .menu-table-toolbar .menu-native-button.menu-toolbar-button.menu-toolbar-button--toggle {
+     width: auto;
+     min-width: 0;
+     padding-inline: 16px;
+  }
+
+ .menu-table-toolbar .menu-native-button.menu-toolbar-button {
+     height: 36px;
+     min-height: 36px;
+     gap: 6px;
+     --std-button-font-size: 13px;
+     --std-button-label-shift: 0.5px;
+  }
+
+ .menu-table-toolbar .menu-native-button.menu-toolbar-button :deep(.std-button-icon),
+ .menu-table-toolbar .menu-native-button.menu-toolbar-button :deep(svg) {
+     width: 14px;
+     height: 14px;
+  }
+
+ .menu-list-page :deep(.glass-container--table) {
+     margin-top: 22px;
+     padding-top: 10px;
+     padding-left: 0;
+     padding-right: 0;
+     position: relative;
+     top: var(--menu-content-visual-offset);
+  }
+
+ .menu-list-page .openai-table {
+     padding: 0;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table),
+ .menu-list-page .openai-table :deep(.ant-table-container),
+ .menu-list-page .openai-table :deep(.ant-table-content) {
+     background: transparent !important;
+     border: none !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-thead > tr > th) {
+     padding: 12px 14px !important;
+     background: transparent !important;
+     border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+     border-top: none !important;
+     border-left: none !important;
+     border-right: none !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr:not(.ant-table-measure-row) > td) {
+     padding: 12px 14px !important;
+     background: transparent !important;
+     border-bottom: none !important;
+     border-top: none !important;
+     border-left: none !important;
+     border-right: none !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr.ant-table-measure-row) {
+     height: 0 !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr.ant-table-measure-row > td) {
+     height: 0 !important;
+     padding: 0 !important;
+     border: 0 !important;
+     background: transparent !important;
+     line-height: 0 !important;
+     font-size: 0 !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr.ant-table-measure-row + tr > td),
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr.ant-table-row:first-of-type > td) {
+     padding-top: 20px !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-thead > tr > th:first-child) {
+     padding-left: 56px !important;
+     text-align: left !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr > td:first-child) {
+     padding-left: 18px !important;
+     text-align: left !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr > td:first-child) {
+     font-weight: 400 !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-row-expand-icon),
+ .menu-list-page .openai-table :deep(.ant-table-row-indent + .ant-table-row-expand-icon) {
+     margin-inline-end: 12px !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-thead > tr > th:nth-child(3)),
+ .menu-list-page .openai-table :deep(.ant-table-thead > tr > th:nth-child(4)),
+ .menu-list-page .openai-table :deep(.ant-table-thead > tr > th:nth-child(7)),
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr > td:nth-child(3)),
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr > td:nth-child(4)),
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr > td:nth-child(7)) {
+     padding-left: 12px !important;
+     padding-right: 12px !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-tbody > tr:hover > td) {
+     background: #fafaf9 !important;
+ }
+
+ .menu-list-page .openai-table :deep(.ant-table-cell-fix-left),
+ .menu-list-page .openai-table :deep(.ant-table-cell-fix-right) {
+     background: #ffffff !important;
+ }
+
  :deep(.ant-input-number-input) { height: 40px; }
  :deep(.ant-input) { width: 260px; }
 
  
  :deep(.ant-select-selector), :deep(.ant-tree-select-selector) { 
-     background-color: #F7F5F5 !important; 
+     background-color: var(--mono-control-bg-hover) !important;
      border: none !important;
      height: 40px !important;  
      align-items: center; 
@@ -426,6 +807,10 @@ onMounted(() => {
      min-height: 40px;
  }
 
+ .menu-config-form {
+     padding-top: 2px;
+ }
+
  /* Modal Button & Title Adjustments */
  :deep(.ant-modal-close) {
      top: 5px !important;    /* Move X down (inwards) */
@@ -435,32 +820,72 @@ onMounted(() => {
      padding: 10px 20px !important;  /* Move Title closer to top-left (reduce top/left padding slightly) */
  }
  
- /* Fix Radio Group Alignment (Push down due to 'extra' text affecting center) */
  :deep(.ant-radio-group) {
-     position: relative;
-     top: 8px;
+     display: flex;
+     flex-wrap: wrap;
+     gap: 8px;
+ }
+
+ :deep(.ant-form-item-extra) {
+     margin-top: 8px;
+     line-height: 1.5;
  }
 
  .menu-table-toolbar {
+     display: flex;
+     align-items: center;
      width: 100%;
+     max-width: 100%;
      flex-wrap: wrap;
      row-gap: 10px;
+     column-gap: 12px;
+     padding-left: 14px;
+     margin-top: 9px;
+  }
+
+ .menu-native-button.menu-button-animated :deep(.std-button-icon),
+ .menu-native-button.menu-button-animated :deep(.std-button-label) {
+     transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
  }
 
- .menu-toolbar-button {
-     height: 34px;
-     padding: 0 16px;
-     border: 1px solid rgba(15, 23, 42, 0.08) !important;
-     border-radius: 999px !important;
-     background: rgba(255, 255, 255, 0.58) !important;
-     color: #4b5563 !important;
-     box-shadow: none !important;
+ .menu-native-button.menu-button-animated:hover,
+ .menu-native-button.menu-button-animated:focus,
+ .menu-native-button.menu-button-animated:focus-visible,
+ .menu-native-button.menu-button-animated:active {
+     transform: none;
  }
 
- .menu-toolbar-button:hover {
-     background: rgba(255, 255, 255, 0.8) !important;
-     border-color: rgba(15, 23, 42, 0.12) !important;
-     color: #1f2937 !important;
+ .menu-native-button.menu-button-animated--add:hover :deep(.std-button-icon),
+ .menu-native-button.menu-button-animated--add:focus :deep(.std-button-icon),
+ .menu-native-button.menu-button-animated--add:focus-visible :deep(.std-button-icon) {
+     transform: scale(1.14);
+ }
+
+ .menu-native-button.menu-toolbar-button.menu-toolbar-button--add {
+     position: relative;
+     top: 24px;
+     justify-content: center;
+  }
+
+ .menu-native-button.menu-toolbar-button.menu-toolbar-button--toggle {
+     position: relative;
+     top: 24px;
+  }
+
+ .menu-toggle-lucide {
+     display: block;
+     stroke-width: 1.8;
+     transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+ }
+
+ .menu-native-button.menu-toolbar-button--toggle.is-expanded .menu-toggle-lucide {
+     transform: scale(0.96);
+ }
+
+ .menu-native-button.menu-button-animated--toggle:hover .menu-toggle-lucide,
+ .menu-native-button.menu-button-animated--toggle:focus .menu-toggle-lucide,
+ .menu-native-button.menu-button-animated--toggle:focus-visible .menu-toggle-lucide {
+     transform: scale(1.08);
  }
 
  .menu-muted-text {
@@ -471,96 +896,244 @@ onMounted(() => {
      margin-inline-end: 8px;
      padding: 2px 10px;
      border-radius: 999px;
-     border: 1px solid rgba(255, 255, 255, 0.45) !important;
-     background: rgba(255, 255, 255, 0.34) !important;
-     color: #4b5563 !important;
+     border: 1px solid var(--tag-surface-border) !important;
+     background: var(--tag-surface-bg) !important;
+     color: var(--tag-surface-text) !important;
      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
  }
 
  .menu-pill--glass {
-     color: #0f8f9a !important;
-     background: rgba(45, 212, 191, 0.16) !important;
-     border-color: rgba(45, 212, 191, 0.24) !important;
+     color: var(--tag-tone-cyan-text) !important;
+     background: var(--tag-tone-cyan-bg) !important;
+     border-color: var(--tag-tone-cyan-border) !important;
  }
 
  .menu-pill--default {
-     color: #b7791f !important;
-     background: rgba(250, 204, 21, 0.14) !important;
-     border-color: rgba(250, 204, 21, 0.24) !important;
+     color: var(--tag-tone-amber-text) !important;
+     background: var(--tag-tone-amber-bg) !important;
+     border-color: var(--tag-tone-amber-border) !important;
  }
 
  .menu-pill--role.menu-pill--admin {
-     color: #2563eb !important;
-     background: rgba(59, 130, 246, 0.1) !important;
-     border-color: rgba(59, 130, 246, 0.2) !important;
+     color: var(--tag-tone-blue-text) !important;
+     background: var(--tag-tone-blue-bg) !important;
+     border-color: var(--tag-tone-blue-border) !important;
  }
 
  .menu-pill--role.menu-pill--staff {
-     color: #1d4ed8 !important;
-     background: rgba(96, 165, 250, 0.12) !important;
-     border-color: rgba(96, 165, 250, 0.2) !important;
+     color: var(--tag-tone-indigo-text) !important;
+     background: var(--tag-tone-indigo-bg) !important;
+     border-color: var(--tag-tone-indigo-border) !important;
  }
 
  .menu-pill--role.menu-pill--coach,
  .menu-pill--role.menu-pill--member {
-     color: #0369a1 !important;
-     background: rgba(56, 189, 248, 0.12) !important;
-     border-color: rgba(56, 189, 248, 0.22) !important;
+     color: var(--tag-tone-sky-text) !important;
+     background: var(--tag-tone-sky-bg) !important;
+     border-color: var(--tag-tone-sky-border) !important;
  }
 
  .menu-action-group {
      flex-wrap: wrap;
+     row-gap: 6px;
  }
 
  .table-glass-action {
-     height: 30px;
-     padding: 0 12px;
-     border-radius: 999px;
-     border: 1px solid transparent !important;
-     background: rgba(255, 255, 255, 0.26) !important;
+     height: auto;
+     padding: 0 4px;
+     border: none !important;
+     background: transparent !important;
      box-shadow: none !important;
+     font-weight: 400;
+     font-size: 13px;
+     letter-spacing: 0;
+     transition: color 0.2s ease, opacity 0.2s ease;
  }
 
  .table-glass-action--primary {
-     color: #2563eb !important;
-     background: rgba(59, 130, 246, 0.08) !important;
-     border-color: rgba(59, 130, 246, 0.16) !important;
+     color: var(--action-tone-primary) !important;
  }
 
  .table-glass-action--accent {
-     color: #b7791f !important;
-     background: rgba(245, 158, 11, 0.1) !important;
-     border-color: rgba(245, 158, 11, 0.18) !important;
+     color: var(--action-tone-accent) !important;
  }
 
  .table-glass-action--danger {
-     color: #dc2626 !important;
-     background: rgba(248, 113, 113, 0.1) !important;
-     border-color: rgba(248, 113, 113, 0.18) !important;
+     color: var(--action-tone-danger) !important;
  }
 
- .table-glass-action:hover {
-     transform: translateY(-1px);
-     background: rgba(255, 255, 255, 0.42) !important;
+ .table-glass-action:hover,
+ .table-glass-action:focus,
+ .table-glass-action:active {
+     background: transparent !important;
+     border-color: transparent !important;
+     box-shadow: none !important;
+     opacity: 1;
  }
 
  .menu-list-page :deep(.transparent-glass-mode .ant-table-tbody > tr > td) {
      vertical-align: middle;
  }
 
- .menu-list-page :deep(.transparent-glass-mode .ant-table-row-expand-icon) {
-     background: rgba(255, 255, 255, 0.36) !important;
-     border-color: rgba(15, 23, 42, 0.08) !important;
-     color: #475569 !important;
+ .menu-list-page :deep(.transparent-glass-mode .ant-table-container) {
+     border: none !important;
+     box-shadow: none !important;
  }
 
- .menu-list-page :deep(.transparent-glass-mode .ant-table-row-expand-icon:hover) {
-     background: rgba(255, 255, 255, 0.56) !important;
+ .menu-list-page :deep(.ant-table-row-level-0 > td:first-child) {
+     font-weight: 400 !important;
+ }
+
+ .menu-list-page :deep(.ant-table-row-level-1 > td:first-child) {
+     color: rgba(17, 24, 39, 0.78);
+ }
+
+ .menu-list-page :deep(.ant-table-row-level-2 > td:first-child) {
+     color: rgba(17, 24, 39, 0.62);
+ }
+
+ .menu-list-page :deep(.ant-table-row-indent) {
+     position: relative;
+     display: inline-block;
+     float: none !important;
+     height: var(--menu-tree-icon-size) !important;
+     vertical-align: middle;
+ }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon) {
+     --menu-tree-icon-rotation: 0deg;
+     --menu-tree-icon-scale: 1;
+     --menu-tree-icon-horizontal-scale: 1;
+     --menu-tree-icon-vertical-rotation: 0deg;
+     --menu-tree-icon-vertical-scale: 1;
+     --menu-tree-icon-vertical-opacity: 1;
+     --menu-tree-icon-vertical-opacity-delay: 0s;
+     position: relative !important;
+     display: inline-flex !important;
+     align-items: center;
+     justify-content: center;
+     width: var(--menu-tree-icon-size) !important;
+     min-width: var(--menu-tree-icon-size) !important;
+     height: var(--menu-tree-icon-size) !important;
+     margin-inline-end: 14px !important;
+     padding: 0 !important;
+     color: #475569 !important;
+     line-height: 1 !important;
+     vertical-align: middle !important;
+     background: transparent !important;
+     border: none !important;
+     border-radius: 0 !important;
+     box-shadow: none !important;
+     perspective: 48px;
+     transform: translateZ(0) rotate(var(--menu-tree-icon-rotation)) scale(var(--menu-tree-icon-scale)) !important;
+     transform-origin: 50% 50%;
+     transition: color 0.22s ease, transform var(--menu-tree-icon-duration) var(--menu-tree-icon-ease);
+ }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon::before),
+ .menu-list-page :deep(.ant-table-row-expand-icon::after) {
+     content: '' !important;
+     position: absolute !important;
+     display: block !important;
+     background: currentColor !important;
+     border-radius: 999px;
+     opacity: 1;
+     transform-origin: 50% 50%;
+     will-change: transform, opacity;
+     transition: transform var(--menu-tree-icon-duration) var(--menu-tree-icon-ease);
+ }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon::before) {
+     top: 50% !important;
+     left: 50% !important;
+     width: var(--menu-tree-icon-bar-length) !important;
+     height: var(--menu-tree-icon-stroke) !important;
+     transform: translate(-50%, -50%) scaleX(var(--menu-tree-icon-horizontal-scale)) !important;
+ }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon::after) {
+     top: 50% !important;
+     left: 50% !important;
+     width: var(--menu-tree-icon-stroke) !important;
+     height: var(--menu-tree-icon-bar-length) !important;
+     opacity: var(--menu-tree-icon-vertical-opacity) !important;
+     transform: translate(-50%, -50%) rotate(var(--menu-tree-icon-vertical-rotation)) scaleY(var(--menu-tree-icon-vertical-scale)) !important;
+     transition:
+         transform var(--menu-tree-icon-duration) var(--menu-tree-icon-ease),
+         opacity 0s linear var(--menu-tree-icon-vertical-opacity-delay);
+ }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon-expanded) {
+     --menu-tree-icon-rotation: 180deg;
+     --menu-tree-icon-horizontal-scale: 0.98;
+     --menu-tree-icon-vertical-rotation: 90deg;
+     --menu-tree-icon-vertical-scale: 1;
+     --menu-tree-icon-vertical-opacity: 0;
+     --menu-tree-icon-vertical-opacity-delay: calc(var(--menu-tree-icon-duration) * 0.92);
+  }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon-spaced) {
+     visibility: hidden !important;
+     pointer-events: none;
+ }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon-spaced::before),
+ .menu-list-page :deep(.ant-table-row-expand-icon-spaced::after) {
+     display: none !important;
+ }
+
+ .menu-list-page :deep(.ant-table-row-expand-icon:hover),
+ .menu-list-page :deep(.ant-table-row-expand-icon:focus),
+ .menu-list-page :deep(.ant-table-row-expand-icon:active) {
+     --menu-tree-icon-scale: 1.06;
+     background: transparent !important;
+     border-color: transparent !important;
+     color: #111827 !important;
+ }
+
+ @media (prefers-reduced-motion: reduce) {
+     .menu-list-page :deep(.ant-table-row-expand-icon),
+     .menu-list-page :deep(.ant-table-row-expand-icon::before),
+     .menu-list-page :deep(.ant-table-row-expand-icon::after) {
+         transition: none !important;
+     }
  }
 
  .menu-list-page :deep(.transparent-glass-mode .ant-table-cell-fix-right) {
      background: rgba(255, 255, 255, 0.12) !important;
      backdrop-filter: blur(10px);
      -webkit-backdrop-filter: blur(10px);
+ }
+
+ html.dark .menu-list-page {
+     --menu-search-bg: rgba(255, 255, 255, 0.04);
+     --menu-search-border: rgba(255, 255, 255, 0.12);
+     --menu-search-border-strong: rgba(255, 255, 255, 0.2);
+     --menu-search-placeholder: rgba(255, 255, 255, 0.48);
+     --menu-search-icon: rgba(255, 255, 255, 0.5);
+     --menu-search-icon-active: rgba(255, 255, 255, 0.82);
+ }
+
+ html.dark .menu-list-page :deep(.ant-table-row-expand-icon) {
+     color: rgba(255, 255, 255, 0.72) !important;
+ }
+
+ html.dark .menu-list-page :deep(.ant-table-row-level-1 > td:first-child) {
+     color: rgba(255, 255, 255, 0.74);
+ }
+
+ html.dark .menu-list-page :deep(.ant-table-row-level-2 > td:first-child) {
+     color: rgba(255, 255, 255, 0.58);
+ }
+
+ html.dark .menu-list-page :deep(.ant-table-row-expand-icon:hover),
+ html.dark .menu-list-page :deep(.ant-table-row-expand-icon:focus),
+ html.dark .menu-list-page :deep(.ant-table-row-expand-icon:active) {
+     color: rgba(255, 255, 255, 0.92) !important;
+ }
+
+ html.dark .menu-list-page :deep(.transparent-glass-mode .ant-table-cell-fix-right) {
+     background: rgba(18, 18, 18, 0.55) !important;
  }
 </style>
