@@ -4,7 +4,11 @@
       v-if="showKeyword"
       :value="modelValue"
       no-margin
-      class="workspace-filter-control toolbar-keyword-input"
+      :class="[
+        'workspace-filter-control',
+        'toolbar-keyword-input',
+        variant === 'menu-list' && 'menu-search-input',
+      ]"
       :width="keywordWidth"
       :placeholder="placeholder"
       @update:value="$emit('update:modelValue', String($event ?? ''))"
@@ -15,7 +19,13 @@
       </template>
     </StandardInput>
 
-    <div :class="['toolbar-action-group', `toolbar-action-group--${variant}`]">
+    <div
+      :class="[
+        'toolbar-action-group',
+        `toolbar-action-group--${variant}`,
+        variant === 'menu-list' && 'menu-search-actions',
+      ]"
+    >
       <StandardButton type="search" icon="search" :loading="loading" @click="$emit('search')">
         查询
       </StandardButton>
@@ -124,6 +134,10 @@ defineEmits<{
   align-self: center;
   gap: 10px !important;
   margin-left: 4px !important;
+}
+
+.toolbar-action-group--menu-list > * {
+  flex: 0 0 auto;
 }
 
 .table-search-toolbar--menu-list .toolbar-keyword-input :deep(.std-input) {

@@ -204,6 +204,31 @@ const containerClass = computed(() => {
   border-top: none !important;
 }
 
+.default-yellow-mode.table-surface--menu-list :deep(.ant-table-thead > tr > th) {
+  padding: 12px 14px !important;
+}
+
+.default-yellow-mode.table-surface--menu-list :deep(.ant-table-tbody > tr > td) {
+  padding: 12px 14px !important;
+}
+
+.default-yellow-mode.table-surface--menu-list :deep(.ant-table-tbody > tr.ant-table-measure-row) {
+  height: 0 !important;
+}
+
+.default-yellow-mode.table-surface--menu-list :deep(.ant-table-tbody > tr.ant-table-measure-row > td) {
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+}
+
+.default-yellow-mode.table-surface--menu-list :deep(.ant-table-tbody > tr.ant-table-measure-row + tr > td),
+.default-yellow-mode.table-surface--menu-list :deep(.ant-table-tbody > tr.ant-table-row:first-of-type > td) {
+  padding-top: 20px !important;
+}
+
 .default-yellow-mode :deep(.ant-table-row-indent + .ant-table-row-expand-icon) {
   margin-right: 8px;
 }
@@ -327,7 +352,7 @@ const containerClass = computed(() => {
   background: #ffffff !important;
 }
 
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination.ant-table-pagination) {
+.table-surface--menu-list :deep(.ant-pagination.ant-table-pagination) {
   margin: 10px 0 0 !important;
   width: 100%;
   display: flex !important;
@@ -336,7 +361,7 @@ const containerClass = computed(() => {
   gap: 4px;
 }
 
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-total-text) {
+.table-surface--menu-list :deep(.ant-pagination-total-text) {
   margin: 0 14px 0 0 !important;
   color: var(--mono-text-secondary) !important;
   font-size: 14px;
@@ -350,9 +375,9 @@ const containerClass = computed(() => {
   transform: translateY(-1px);
 }
 
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-prev),
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-next),
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-item) {
+.table-surface--menu-list :deep(.ant-pagination-prev),
+.table-surface--menu-list :deep(.ant-pagination-next),
+.table-surface--menu-list :deep(.ant-pagination-item) {
   min-width: 36px;
   height: 36px;
   margin: 0 !important;
@@ -362,8 +387,8 @@ const containerClass = computed(() => {
   line-height: 1 !important;
 }
 
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-prev .ant-pagination-item-link),
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-next .ant-pagination-item-link) {
+.table-surface--menu-list :deep(.ant-pagination-prev .ant-pagination-item-link),
+.table-surface--menu-list :deep(.ant-pagination-next .ant-pagination-item-link) {
   width: 36px;
   min-width: 36px;
   height: 36px;
@@ -377,7 +402,7 @@ const containerClass = computed(() => {
   padding: 0 !important;
 }
 
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-item a) {
+.table-surface--menu-list :deep(.ant-pagination-item a) {
   display: flex !important;
   align-items: center;
   justify-content: center;
@@ -387,12 +412,12 @@ const containerClass = computed(() => {
   color: var(--mono-text-secondary) !important;
 }
 
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-item-active) {
+.table-surface--menu-list :deep(.ant-pagination-item-active) {
   border: none !important;
   background: transparent !important;
 }
 
-.transparent-glass-mode.table-surface--menu-list :deep(.ant-pagination-item-active a) {
+.table-surface--menu-list :deep(.ant-pagination-item-active a) {
   color: var(--mono-text) !important;
   font-weight: 700 !important;
 }

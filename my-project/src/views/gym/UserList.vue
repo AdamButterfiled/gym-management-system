@@ -2,18 +2,16 @@
   <div class="user-list-page">
     <WorkspacePage title="用户信息管理" variant="menu-list">
       <template #actions>
-        <div class="header-actions">
-          <StandardButton type="add" icon="plus" class="add-user-button" @click="handleAdd">
-            新增用户
-          </StandardButton>
+        <StandardButton type="add" icon="plus" class="add-user-button" @click="handleAdd">
+          新增用户
+        </StandardButton>
 
-          <div class="delete-shell">
-            <BatchDeleteButton
-              v-model:active="isDeleteMode"
-              :count="selectedRowKeys.length"
-              @delete="handleBatchDelete"
-            />
-          </div>
+        <div class="delete-shell">
+          <BatchDeleteButton
+            v-model:active="isDeleteMode"
+            :count="selectedRowKeys.length"
+            @delete="handleBatchDelete"
+          />
         </div>
       </template>
 
@@ -31,7 +29,7 @@
         />
       </template>
 
-      <section class="workspace-subsection table-area">
+      <section class="workspace-subsection">
         <StandardTable
           class="user-list-table"
           :configStyle="currentStyle"
@@ -298,70 +296,9 @@ onMounted(() => {
   min-width: 0;
 }
 
-.workspace-shell {
-  background: transparent;
-  padding: 2px 4px 0 0;
-}
-
-.workspace-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 2px 0 8px;
-}
-
-.title-group {
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px;
-  min-width: 0;
-  flex-shrink: 0;
-}
-
-.page-title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: var(--app-page-title-size);
-  line-height: 0.98;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.page-meta {
-  color: var(--text-secondary);
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-  justify-content: flex-start;
-}
-
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 22px 0 0;
-}
-
-.add-user-button {
-  height: 36px;
-  min-height: 36px;
-}
-
 .delete-shell {
   display: flex;
   align-items: center;
-}
-
-.table-area {
-  padding-top: 0;
 }
 
 .user-list-table :deep(.column-username-head) {
@@ -555,46 +492,6 @@ onMounted(() => {
   min-height: 40px;
 }
 
-@media (max-width: 960px) {
-  .workspace-shell {
-    padding: 2px 0 0;
-  }
-
-  .workspace-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .title-group {
-    flex-wrap: wrap;
-  }
-
-  .header-actions {
-    justify-content: flex-start;
-  }
-
-  .filter-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-composer {
-    width: 100%;
-  }
-
-  .search-submit-button,
-  .quiet-action-button {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 640px) {
-  .search-submit-button,
-  .quiet-action-button {
-    flex: 1 1 auto;
-  }
-}
-
 </style>
 
 <style>
@@ -605,14 +502,6 @@ html.dark .user-list-page {
   --text-secondary: rgba(255, 255, 255, 0.68);
   --text-tertiary: rgba(255, 255, 255, 0.42);
   background: #000000;
-}
-
-html.dark .user-list-page .workspace-shell {
-  background: #000000;
-}
-
-html.dark .user-list-page .page-title {
-  color: rgba(255, 255, 255, 0.96);
 }
 
 html.dark .user-list-page .page-meta,
@@ -626,51 +515,6 @@ html.dark .user-list-page .user-subcopy {
 html.dark .user-list-page .user-name,
 html.dark .user-list-page .balance-cell {
   color: var(--text-primary);
-}
-
-html.dark .user-list-page .search-composer {
-  background: transparent !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: none !important;
-}
-
-html.dark .user-list-page .search-composer:focus-within {
-  background: transparent !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  box-shadow: none !important;
-}
-
-html.dark .user-list-page .search-input--refined .std-input-control {
-  color: rgba(255, 255, 255, 0.92) !important;
-  background: transparent !important;
-}
-
-html.dark .user-list-page .search-input--refined .std-input-control::placeholder {
-  color: rgba(255, 255, 255, 0.44) !important;
-}
-
-html.dark .user-list-page .search-submit-button {
-  border-color: rgba(255, 255, 255, 0.14) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: rgba(255, 255, 255, 0.96) !important;
-}
-
-html.dark .user-list-page .search-submit-button:hover {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: rgba(255, 255, 255, 0.96) !important;
-}
-
-html.dark .user-list-page .quiet-action-button {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  background: transparent !important;
-  color: rgba(255, 255, 255, 0.78) !important;
-}
-
-html.dark .user-list-page .quiet-action-button:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: rgba(255, 255, 255, 0.96) !important;
 }
 
 html.dark .user-list-page .delete-shell .trash-btn,

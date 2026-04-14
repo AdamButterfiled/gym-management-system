@@ -1,8 +1,8 @@
 <template>
   <section :class="['workspace-shell', `workspace-shell--${variant}`]">
-    <div class="workspace-header">
+    <div :class="['workspace-header', variant === 'menu-list' && 'menu-page-header']">
       <div class="title-group">
-        <h1 class="page-title">{{ title }}</h1>
+        <h1 :class="['page-title', variant === 'menu-list' && 'menu-page-title']">{{ title }}</h1>
         <slot name="meta" />
       </div>
 
@@ -15,28 +15,56 @@
       <slot name="filters" />
     </div>
 
-    <div v-if="variant === 'menu-list' && ($slots.filters || $slots.actions)" class="workspace-controls">
-      <div v-if="$slots.filters" class="filter-row">
+    <div
+      v-if="variant === 'menu-list' && ($slots.filters || $slots.actions)"
+      :class="['workspace-controls', 'menu-page-controls']"
+    >
+      <div v-if="$slots.filters" :class="['filter-row', 'menu-search-row']">
         <slot name="filters" />
       </div>
 
-      <div v-if="$slots.actions" class="actions-row">
+      <div v-if="$slots.actions" :class="['actions-row', 'menu-table-toolbar']">
         <slot name="actions" />
       </div>
     </div>
 
-    <div class="workspace-body">
+    <GlassCard
+      v-if="resolvedBodySurface === 'table-card'"
+      variant="table"
+      :class="['workspace-body-card', variant === 'menu-list' && 'menu-table-card']"
+    >
+      <div class="workspace-body workspace-body--card">
+        <slot />
+      </div>
+    </GlassCard>
+
+    <div v-else class="workspace-body">
       <slot />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{
+import { computed, toRefs } from 'vue';
+import GlassCard from '@/components/common/GlassCard.vue';
+
+const props = withDefaults(defineProps<{
   title: string;
   variant?: 'default' | 'menu-list';
+  bodySurface?: 'auto' | 'plain' | 'table-card';
 }>(), {
   variant: 'default',
+  bodySurface: 'auto',
+});
+
+const { title, variant } = toRefs(props);
+
+const resolvedBodySurface = computed(() => {
+  if (props.bodySurface !== 'auto') {
+    return props.bodySurface;
+  }
+
+  return props.variant === 'menu-list' ? 'table-card' : 'plain';
 });
 </script>
 
@@ -159,11 +187,30 @@ withDefaults(defineProps<{
   row-gap: 10px;
   column-gap: 12px;
   padding-left: 14px;
-  margin-top: 33px;
+  margin-top: 9px;
+}
+
+.workspace-shell--menu-list .actions-row > * {
+  position: relative;
+  top: 24px;
+  flex: 0 0 auto;
 }
 
 .workspace-shell--menu-list .workspace-body {
   padding-top: 32px;
+}
+
+.workspace-shell--menu-list .workspace-body-card {
+  margin-top: 22px;
+  padding-top: 10px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  position: relative;
+  top: 10px;
+}
+
+.workspace-shell--menu-list .workspace-body--card {
+  padding-top: 0;
 }
 
 .workspace-shell--menu-list :deep(.table-search-toolbar--menu-list) {
@@ -229,6 +276,11 @@ withDefaults(defineProps<{
 
   .workspace-shell--menu-list .workspace-body {
     padding-top: 18px;
+  }
+
+  .workspace-shell--menu-list .workspace-body-card {
+    margin-top: 18px;
+    top: 0;
   }
 }
 </style>
