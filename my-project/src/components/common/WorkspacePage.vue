@@ -1,32 +1,41 @@
 <template>
   <section :class="['workspace-shell', `workspace-shell--${variant}`]">
-    <div :class="['workspace-header', variant === 'menu-list' && 'menu-page-header']">
+    <div v-if="variant === 'menu-list'" class="workspace-header menu-page-header">
       <div class="title-group">
-        <h1 :class="['page-title', variant === 'menu-list' && 'menu-page-title']">{{ title }}</h1>
+        <h1 class="page-title menu-page-title">{{ title }}</h1>
         <slot name="meta" />
       </div>
 
-      <div v-if="$slots.actions && variant === 'default'" class="header-actions">
-        <slot name="actions" />
+      <div
+        v-if="$slots.filters || $slots.actions"
+        :class="['workspace-controls', 'menu-page-controls']"
+      >
+        <div v-if="$slots.filters" :class="['filter-row', 'menu-search-row']">
+          <slot name="filters" />
+        </div>
+
+        <div v-if="$slots.actions" :class="['actions-row', 'menu-table-toolbar']">
+          <slot name="actions" />
+        </div>
       </div>
     </div>
 
-    <div v-if="$slots.filters && variant === 'default'" class="filter-row">
-      <slot name="filters" />
-    </div>
+    <template v-else>
+      <div class="workspace-header">
+        <div class="title-group">
+          <h1 class="page-title">{{ title }}</h1>
+          <slot name="meta" />
+        </div>
 
-    <div
-      v-if="variant === 'menu-list' && ($slots.filters || $slots.actions)"
-      :class="['workspace-controls', 'menu-page-controls']"
-    >
-      <div v-if="$slots.filters" :class="['filter-row', 'menu-search-row']">
+        <div v-if="$slots.actions" class="header-actions">
+          <slot name="actions" />
+        </div>
+      </div>
+
+      <div v-if="$slots.filters" class="filter-row">
         <slot name="filters" />
       </div>
-
-      <div v-if="$slots.actions" :class="['actions-row', 'menu-table-toolbar']">
-        <slot name="actions" />
-      </div>
-    </div>
+    </template>
 
     <GlassCard
       v-if="resolvedBodySurface === 'table-card'"
@@ -77,7 +86,9 @@ const resolvedBodySurface = computed(() => {
 }
 
 .workspace-shell--menu-list {
+  display: block;
   padding-top: 2px;
+  padding-right: 0;
 }
 
 .workspace-header {
@@ -135,6 +146,7 @@ const resolvedBodySurface = computed(() => {
   margin-top: 0;
   margin-bottom: 40px;
   padding-top: 2px;
+  padding-bottom: 0;
 }
 
 .workspace-shell--menu-list .title-group {
