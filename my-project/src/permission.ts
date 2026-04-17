@@ -1,17 +1,202 @@
 import router from './router'
 import store from '@/store'
+import { message } from 'ant-design-vue';
 import { RouteLocationNormalized, NavigationGuardNext } from 'vue-router';
+import { clearAuthStorage, getStoredUser, hasValidToken } from '@/utils/auth';
+import { collectRouteCandidates, getSmartRedirectTarget, isRouteFallback, normalizeRoutePath } from './router/routeCorrection';
 
-// 白名单路由 (无需登录即可访问)
-const whiteList = ['/login', '/mobile', '/404'];
+const viewModules: Record<string, () => Promise<unknown>> = import.meta.glob('./views/**/*.vue');
+
+// 白名单路由 (无需登录即可访问)：必须精确匹配，避免 /login1212 这类错误路径被放行成空白页。
+const isPublicRoute = (path: string) => {
+    const normalizedPath = normalizeRoutePath(path);
+    return normalizedPath === '/login'
+        || normalizedPath === '/404'
+        || /^\/mobile\/[^/]+$/.test(normalizedPath);
+};
+
+const normalizeMenuComponentPath = (componentPath?: string | null) => String(componentPath || '')
+        .replace(/^\/+/, '')
+        .replace(/\.vue$/i, '');
+
+const isPlaceholderMenuComponent = (componentPath?: string | null) => {
+    const normalizedComponentPath = normalizeMenuComponentPath(componentPath).toLowerCase();
+    return !normalizedComponentPath || normalizedComponentPath === 'layout';
+};
+
+const resolveMenuComponent = (componentPath: string) => {
+    const normalizedComponentPath = normalizeMenuComponentPath(componentPath);
+    const modulePath = `./views/${normalizedComponentPath}.vue`;
+    const loader = viewModules[modulePath];
+
+    if (!loader) {
+        throw new Error(`Component not found: ${modulePath}`);
+    }
+
+    return loader;
+};
+
+const resetRouteState = () => {
+    store.commit('SET_ROUTES_LOADED', false);
+    store.commit('SET_MENU_TREE', []);
+};
+
+const hasRegisteredRoute = (path: string, name?: string) => {
+    const normalizedPath = normalizeRoutePath(path);
+    return router.getRoutes().some(route => {
+        const sameName = typeof route.name === 'string' && !!name && route.name === name;
+        const samePath = normalizeRoutePath(route.path) === normalizedPath;
+        return sameName || samePath;
+    });
+};
+
+const collectMenuPaths = (menus: Array<{ path?: string; component?: string | null; children?: any[] }> = []) => {
+    const pathSet = new Set<string>();
+
+    const walk = (items: Array<{ path?: string; component?: string | null; children?: any[] }>) => {
+        items.forEach(item => {
+            if (item.path && !isPlaceholderMenuComponent(item.component)) {
+                pathSet.add(normalizeRoutePath(item.path));
+            }
+
+            if (item.children && item.children.length > 0) {
+                walk(item.children);
+            }
+        });
+    };
+
+    walk(menus);
+    return Array.from(pathSet);
+};
+
+const redirectToFirstAccessibleMenu = (
+    next: NavigationGuardNext,
+    to: RouteLocationNormalized,
+    accessiblePaths: string[],
+    currentPath: string
+) => {
+    const firstAccessiblePath = accessiblePaths[0];
+    if (firstAccessiblePath) {
+        redirectToResolvedPath(next, to, firstAccessiblePath);
+        return;
+    }
+
+    redirectToNotFound(next, currentPath);
+};
+
+const registerDynamicRoutes = (menuList: any[]) => {
+    menuList.forEach((menu: any) => {
+        if (isPlaceholderMenuComponent(menu.component)) {
+            return;
+        }
+        if (menu.component && menu.path) {
+            try {
+                if (hasRegisteredRoute(menu.path, menu.name || menu.title)) {
+                    return;
+                }
+
+                let effectiveStyle = menu.componentStyle;
+                if (!effectiveStyle && menu.parentId) {
+                    let currentParentId = menu.parentId;
+                    while (currentParentId) {
+                        const parent = menuList.find((item: any) => item.id === currentParentId);
+                        if (parent) {
+                            if (parent.componentStyle) {
+                                effectiveStyle = parent.componentStyle;
+                                break;
+                            }
+                            currentParentId = parent.parentId;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                if (!effectiveStyle) {
+                    effectiveStyle = 'default';
+                }
+
+                router.addRoute('HomePage', {
+                    path: menu.path.replace(/^\//, ''),
+                    name: (menu.name || menu.title) as string,
+                    component: resolveMenuComponent(menu.component),
+                    meta: {
+                        title: menu.title,
+                        style: effectiveStyle
+                    }
+                });
+            } catch (error) {
+                console.error(`Component load failed: ${menu.component}`, error);
+            }
+        }
+    });
+};
+
+const redirectToResolvedPath = (
+    next: NavigationGuardNext,
+    to: RouteLocationNormalized,
+    path: string
+) => {
+    next({
+        path,
+        query: to.query,
+        hash: to.hash,
+        replace: true
+    });
+};
+
+const redirectToNotFound = (next: NavigationGuardNext, path: string) => {
+    next({
+        path: '/404',
+        query: { from: path },
+        replace: true
+    });
+};
+
+const handleSmartFallback = (
+    to: RouteLocationNormalized,
+    next: NavigationGuardNext,
+    candidates: string[]
+) => {
+    const normalizedPath = normalizeRoutePath(to.path);
+
+    if (candidates.includes(normalizedPath)) {
+        redirectToResolvedPath(next, to, normalizedPath);
+        return true;
+    }
+
+    const smartTarget = getSmartRedirectTarget(normalizedPath, candidates);
+    if (smartTarget) {
+        redirectToResolvedPath(next, to, smartTarget);
+        return true;
+    }
+
+    redirectToNotFound(next, normalizedPath);
+    return true;
+};
 
 router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
+    const user = getStoredUser();
+    const tokenReady = hasValidToken(user);
+    const normalizedPath = normalizeRoutePath(to.path);
+
+    if (isRouteFallback(to)) {
+        const publicTarget = getSmartRedirectTarget(normalizedPath, collectRouteCandidates(router));
+        if (publicTarget && isPublicRoute(publicTarget)) {
+            redirectToResolvedPath(next, to, publicTarget);
+            return;
+        }
+    }
+
     // 1. 判断是否在白名单中
-    // 注意：/mobile/:uuid 这种带参数的需要用正则或 startsWith 判断
-    if (whiteList.some(path => to.path.startsWith(path))) {
+    if (isPublicRoute(normalizedPath)) {
         // 如果是去登录页且已登录，跳转到首页
-        const userJson = localStorage.getItem('user');
-        if (to.path === '/login' && userJson) {
+        if (user && !tokenReady) {
+            clearAuthStorage();
+            resetRouteState();
+        }
+
+        if (normalizedPath === '/login' && tokenReady) {
             next({ path: '/' });
         } else {
             next();
@@ -20,95 +205,71 @@ router.beforeEach(async (to: RouteLocationNormalized, from: RouteLocationNormali
     }
 
     // 2. 判断是否有Token (已登录)
-    const userJson = localStorage.getItem('user');
-    if (userJson) {
+    if (tokenReady) {
         // 3. 判断路由是否已动态加载
         if (store.getters.areRoutesLoaded) {
+            const accessiblePaths = collectMenuPaths(store.getters.getMenuTree);
+            if (normalizedPath !== '/' && !accessiblePaths.includes(normalizedPath)) {
+                if (isRouteFallback(to)) {
+                    handleSmartFallback(to, next, accessiblePaths.length ? accessiblePaths : collectRouteCandidates(router));
+                } else {
+                    redirectToFirstAccessibleMenu(next, to, accessiblePaths, normalizedPath);
+                }
+                return;
+            }
+
+            if (isRouteFallback(to)) {
+                handleSmartFallback(to, next, accessiblePaths.length ? accessiblePaths : collectRouteCandidates(router));
+                return;
+            }
             next();
         } else {
             try {
-                // 4. 获取菜单数据 (返回扁平列表)
                 const menuList = await store.dispatch('fetchUserMenus');
-
-                // 5. 动态添加路由
-                // 我们所有的动态页面都是 HomePage 的子路由，所以 parentName='HomePage'
-                // 如果是顶级路由(Layout)，则 parentName 为空
-
-                // 引入所有 views 下的组件
-                // 注意: require.context 是 Webpack 的，Vite 用 import.meta.glob
-                // 这里项目是 Vue CLI (Webpack)，使用 require.context 或 import()
-                // 但 import() 必须写死一部分路径，所以最好建立映射与后端约定
-                // 简单起见，我们只能假设组件都在 src/views 下
-
-                menuList.forEach((menu: any) => {
-                    if (menu.component && menu.path) {
-                        try {
-                            // 计算有效样式 (简单的继承逻辑：如果当前没有，查找父级)
-                            let effectiveStyle = menu.componentStyle;
-                            if (!effectiveStyle && menu.parentId) {
-                                let currentParentId = menu.parentId;
-                                // 查找父级菜单配置
-                                while (currentParentId) {
-                                    // 注意: menuList 是扁平数组
-                                    const parent = menuList.find((m: any) => m.id === currentParentId);
-                                    if (parent) {
-                                        if (parent.componentStyle) {
-                                            effectiveStyle = parent.componentStyle;
-                                            break; // 找到最近配置即停止
-                                        }
-                                        currentParentId = parent.parentId;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                            }
-
-                            // 默认样式处理：如果最终没有找到样式，或者显式为 default，统一标记为 default
-                            // 这样 HomePage 可以统一处理
-                            if (!effectiveStyle) {
-                                effectiveStyle = 'default';
-                            }
-
-
-
-                            router.addRoute('HomePage', {
-                                path: menu.path.replace(/^\//, ''), // 去掉开头斜杠作为子路由path(相对路径)
-                                name: (menu.name || menu.title) as string,      // 路由名称
-                                // 核心：根据后端 component 字符串加载组件
-                                // 必须是相对路径，例如 'gym/VenueList' -> import('@/views/gym/VenueList.vue')
-                                component: () => import(`@/views/${menu.component}.vue`),
-                                meta: {
-                                    title: menu.title,
-                                    style: effectiveStyle // 将计算后的样式存入 meta，供 App.vue 或组件读取
-                                }
-                            });
-                        } catch (e) {
-                            console.error(`Component load failed: ${menu.component}`, e);
-                        }
-                    }
-                });
-
-                // 6. 添加 404 路由 (最后添加，防止匹配不到动态路由)
-                router.addRoute({ path: '/:pathMatch(.*)*', redirect: '/dashboard' });
-
-                // 7. 标记路由已加载
+                registerDynamicRoutes(menuList);
                 store.commit('SET_ROUTES_LOADED', true);
 
-                // 8. 重新进入路由 (replace: true 确保路由加载完成)
+                const candidates = collectRouteCandidates(router, menuList);
+                const accessiblePaths = collectMenuPaths(menuList);
+                if (normalizedPath !== '/' && !accessiblePaths.includes(normalizedPath)) {
+                    const resolvedRoute = router.resolve(normalizedPath);
+                    if (isRouteFallback(resolvedRoute)) {
+                        handleSmartFallback(to, next, accessiblePaths.length ? accessiblePaths : candidates);
+                    } else {
+                        redirectToFirstAccessibleMenu(next, to, accessiblePaths, normalizedPath);
+                    }
+                    return;
+                }
+
+                if (candidates.includes(normalizedPath)) {
+                    next({ ...to, replace: true });
+                    return;
+                }
+
+                const resolvedRoute = router.resolve(normalizedPath);
+                if (isRouteFallback(resolvedRoute)) {
+                    handleSmartFallback(to, next, accessiblePaths.length ? accessiblePaths : candidates);
+                    return;
+                }
+
                 next({ ...to, replace: true });
 
             } catch (error) {
                 console.error("Dynamic route loading error", error);
-                // 出错时清除登录状态并重定向回登录页
-                localStorage.removeItem('user');
+                clearAuthStorage();
+                resetRouteState();
                 next('/login');
             }
         }
     } else {
-        // 未登录，跳转到登录页
-        // 避免无限重定向
-        if (to.path !== '/login') {
-            next(`/login?redirect=${to.path}`);
+        if (user) {
+            clearAuthStorage();
+            resetRouteState();
+            message.warning('登录状态已失效，请重新登录');
+        }
+
+        if (normalizedPath !== '/login') {
+            next(`/login?redirect=${encodeURIComponent(to.fullPath)}`);
         } else {
             next();
         }

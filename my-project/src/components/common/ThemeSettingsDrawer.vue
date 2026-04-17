@@ -33,7 +33,7 @@
               </div>
             </div>
           </div>
-          <span class="style-label">透明玻璃 Aero</span>
+          <span class="style-label">透明极简白</span>
         </div>
         <div 
           class="style-card"
@@ -160,7 +160,7 @@
     </div>
 
     <!-- 圆角 -->
-    <div class="settings-section last-section">
+    <div class="settings-section">
       <div class="section-title-row">
         <span class="section-title" style="margin-bottom: 0;">
           <border-outer-outlined /> 圆角
@@ -174,10 +174,66 @@
       <div class="section-desc">开启后界面元素使用圆角展示</div>
     </div>
 
+    <div class="settings-section">
+      <div class="section-title-row">
+        <span class="section-title" style="margin-bottom: 0;">
+          <tags-outlined /> 彩签
+        </span>
+        <a-switch
+          :checked="colorfulTags"
+          @change="setColorfulTags"
+          size="small"
+        />
+      </div>
+      <div class="section-desc">开启后系统标签保留彩色语义，关闭后统一使用适配黑白风格的标签颜色</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="section-title-row">
+        <span class="section-title" style="margin-bottom: 0;">
+          <highlight-outlined /> 标题艺术字
+        </span>
+        <a-switch
+          :checked="artisticTitles"
+          @change="setArtisticTitles"
+          size="small"
+        />
+      </div>
+      <div class="section-desc">开启后页面标题与工作台里的数字展示一起使用艺术字，关闭后恢复常规字体</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="section-title-row">
+        <span class="section-title" style="margin-bottom: 0;">
+          <font-colors-outlined /> 全局艺术字
+        </span>
+        <a-switch
+          :checked="globalArtFont"
+          @change="setGlobalArtFont"
+          size="small"
+        />
+      </div>
+      <div class="section-desc">开启后整个系统页面统一切换为艺术字字体，登录页不受影响</div>
+    </div>
+
+    <div class="settings-section last-section">
+      <div class="section-title-row">
+        <span class="section-title" style="margin-bottom: 0;">
+          <appstore-outlined /> 记账本风格
+        </span>
+        <a-switch
+          :checked="ledgerShell"
+          @change="setLedgerShell"
+          size="small"
+        />
+      </div>
+      <div class="section-desc">开启后恢复内页圆角卡片页壳，关闭则使用当前平铺样式</div>
+    </div>
+
     <!-- Style mode note -->
     <div v-if="styleMode === 'traditional'" class="style-note">
       <info-circle-outlined style="margin-right: 6px;" />
-      经典风格下，菜单配置中的表格样式选项将禁用，全局玻璃效果关闭。
+      经典风格会启用更实的层次与暖白页面氛围，菜单配置中的表格样式选项将禁用。
     </div>
 
   </a-drawer>
@@ -194,6 +250,9 @@ import {
   BulbOutlined,
   DesktopOutlined,
   BorderOuterOutlined,
+  TagsOutlined,
+  HighlightOutlined,
+  FontColorsOutlined,
   PlusOutlined,
   CloseOutlined
 } from '@ant-design/icons-vue';
@@ -214,7 +273,11 @@ const showCustomColorPicker = ref(false);
 // Getters
 const styleMode = computed(() => store.state.themeSettings.styleMode);
 const themeColor = computed(() => store.state.themeSettings.themeColor);
+const artisticTitles = computed(() => store.state.themeSettings.artisticTitles !== false);
+const globalArtFont = computed(() => store.state.themeSettings.globalArtFont === true);
 const borderRadius = computed(() => store.state.themeSettings.borderRadius);
+const colorfulTags = computed(() => store.state.themeSettings.colorfulTags);
+const ledgerShell = computed(() => store.state.themeSettings.ledgerShell);
 const darkMode = computed(() => store.state.themeSettings.darkMode);
 
 // Setters
@@ -226,8 +289,24 @@ const setThemeColor = (color: string) => {
   store.commit('themeSettings/SET_THEME_COLOR', color);
 };
 
+const setArtisticTitles = (enabled: boolean) => {
+  store.commit('themeSettings/SET_ARTISTIC_TITLES', enabled);
+};
+
+const setGlobalArtFont = (enabled: boolean) => {
+  store.commit('themeSettings/SET_GLOBAL_ART_FONT', enabled);
+};
+
 const setBorderRadius = (enabled: boolean) => {
   store.commit('themeSettings/SET_BORDER_RADIUS', enabled);
+};
+
+const setColorfulTags = (enabled: boolean) => {
+  store.commit('themeSettings/SET_COLORFUL_TAGS', enabled);
+};
+
+const setLedgerShell = (enabled: boolean) => {
+  store.commit('themeSettings/SET_LEDGER_SHELL', enabled);
 };
 
 const setDarkMode = (mode: DarkMode) => {
@@ -249,6 +328,7 @@ const handleCustomColor = (e: Event) => {
 
 // Preset colors
 const presetColors = [
+  { name: '墨黑', value: '#111111' },
   { name: '拂晓蓝', value: '#1890ff' },
   { name: '薄暮红', value: '#f5222d' },
   { name: '火山橙', value: '#fa541c' },
@@ -384,7 +464,7 @@ const presetColors = [
   cursor: pointer;
   text-align: center;
   border: 1.5px solid transparent;
-  border-radius: 16px;
+  border-radius: var(--mono-radius-md);
   padding: 16px 12px;
   background: #fff;
   transition: all 0.3s ease;
@@ -420,7 +500,7 @@ const presetColors = [
 
 .style-preview {
   height: 70px; /* Taller preview */
-  border-radius: 8px;
+  border-radius: var(--mono-radius-sm);
   display: flex;
   overflow: hidden;
   margin-bottom: 16px;
@@ -435,7 +515,7 @@ const presetColors = [
 
 /* --- Glass Preview - Gray Transparent --- */
 .glass-preview {
-  background: #f0f2f5;
+  background: #ffffff;
   position: relative;
   overflow: hidden;
 }
@@ -474,15 +554,12 @@ const presetColors = [
 .glass-preview .glass-window {
   width: 100%;
   height: 100%;
-  /* <--- [Adjust] Glass Background Opacity / 玻璃背景透明度 */
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(8px); /* <--- [Adjust] Blur Amount / 模糊程度 */
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 6px;
-  /* <--- [Adjust] Border Color & Opacity / 边框颜色和透明度 */
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  /* Removed heavy shadow */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: var(--mono-radius-xs);
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  box-shadow: 0 10px 22px rgba(15,23,42,0.04);
   display: flex;
   flex-direction: column;
   position: relative; /* Ensure it can contain absolute children */
@@ -497,7 +574,7 @@ const presetColors = [
 
 .glass-preview .win-header {
   height: 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
+  border-bottom: 1px solid rgba(17,17,17,0.06);
   display: flex;
   align-items: center;
   padding-left: 6px;
@@ -510,14 +587,14 @@ const presetColors = [
 .glass-preview .win-dot {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: var(--mono-radius-pill);
   background: rgba(255,255,255,0.8);
 }
 
 /* --- Traditional Preview Tweaks --- */
 .traditional-preview {
-  background: #f0f2f5;
-  border: 1px solid #e8e8e8;
+  background: linear-gradient(180deg, #f7f7f5 0%, #f2f2ef 100%);
+  border: 1px solid #eceae4;
   flex-direction: row;
 }
 :global(.dark) .traditional-preview {
@@ -528,7 +605,8 @@ const presetColors = [
 /* ... (keep internal structure styles mostly same, just tweaks) ... */
 .preview-sidebar {
   width: 25%;
-  background: #001529; /* Dark sider usually */
+  background: linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(247,247,245,0.92) 100%);
+  border-right: 1px solid rgba(17,17,17,0.06);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -539,9 +617,9 @@ const presetColors = [
 
 .sidebar-line {
   width: 60%;
-  height: 2px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 1px;
+  height: 3px;
+  background: rgba(17,17,17,0.16);
+  border-radius: var(--mono-radius-pill);
 }
 
 .preview-right {
@@ -552,9 +630,11 @@ const presetColors = [
 }
 
 .preview-header {
-  height: 12px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  height: 14px;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(17,17,17,0.05);
 }
 :global(.dark) .preview-header {
   background: #1f1f1f;
@@ -562,10 +642,11 @@ const presetColors = [
 }
 .preview-content {
   flex: 1;
-  background: #fff; /* White content area */
+  background: #fff;
   margin: 6px;
-  border-radius: 2px;
-  border: 1px solid #f0f0f0;
+  border-radius: var(--mono-radius-sm) 0 0 var(--mono-radius-sm);
+  border: 1px solid rgba(17,17,17,0.05);
+  box-shadow: 0 8px 18px rgba(15,23,42,0.04);
 }
 :global(.dark) .preview-content {
   background: #141414;
@@ -598,7 +679,7 @@ const presetColors = [
 .color-swatch {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--mono-radius-pill);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -616,7 +697,7 @@ const presetColors = [
   left: -4px;
   right: -4px;
   bottom: -4px;
-  border-radius: 50%;
+  border-radius: var(--mono-radius-pill);
   border: 2px solid transparent;
   transition: border-color 0.2s;
 }
@@ -653,7 +734,7 @@ const presetColors = [
   margin-top: 20px;
   padding: 10px 14px;
   background: rgba(0,0,0,0.03);
-  border-radius: 8px;
+  border-radius: var(--mono-radius-sm);
   border: 1px solid rgba(0,0,0,0.05);
 }
 
@@ -667,7 +748,7 @@ const presetColors = [
   height: 32px;
   padding: 0;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--mono-radius-pill);
   cursor: pointer;
   background: transparent;
   overflow: hidden;
@@ -701,7 +782,7 @@ const presetColors = [
 /* Scene Card (Day/Night) */
 .scene-card {
   flex: 1;
-  border-radius: 12px;
+  border-radius: var(--mono-radius-sm);
   border: 1.5px solid transparent; /* Transparent by default */
   cursor: pointer;
   background: #fff;
@@ -726,7 +807,7 @@ const presetColors = [
   width: 100%;
   height: 60px;
   background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%); /* Day Sky */
-  border-radius: 8px;
+  border-radius: var(--mono-radius-sm);
   position: relative;
   overflow: hidden;
   transition: background 0.8s ease;
@@ -784,7 +865,7 @@ const presetColors = [
   width: 2px;
   height: 2px;
   background: white;
-  border-radius: 50%;
+  border-radius: var(--mono-radius-pill);
   opacity: 0;
   transition: opacity 0.5s;
 }
@@ -806,7 +887,7 @@ const presetColors = [
 /* System Card */
 .system-card {
   flex: 1;
-  border-radius: 12px;
+  border-radius: var(--mono-radius-sm);
   border: 1.5px solid transparent; /* Transparent by default */
   cursor: pointer;
   background: #fff;
@@ -854,7 +935,7 @@ const presetColors = [
   margin-top: 24px;
   padding: 12px 16px;
   background: rgba(255, 160, 0, 0.1);
-  border-radius: 8px;
+  border-radius: var(--mono-radius-sm);
   font-size: 12px;
   color: #ad6800;
   line-height: 1.6;

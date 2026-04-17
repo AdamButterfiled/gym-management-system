@@ -19,5 +19,6 @@ public class Equipment implements Serializable {
     private String description;
     private String status; // AVAILABLE, IN_USE, MAINTENANCE
     private Long venueId;
+    private Integer quantity;
     private String image;
 }

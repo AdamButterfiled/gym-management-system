@@ -1,107 +1,156 @@
 <template>
-  <div class="equipment-list-page">
-    <!-- Search Container -->
-    <GlassCard variant="search">
-      <a-form layout="inline" style="padding-top: 0px;">
-        <div style="margin-left: 14px;">
-           <div style="color:#867E7E;">器材名称</div>
-           <StandardInput 
-              v-model:value="searchText" 
-              placeholder="请输入" 
-              class="input-1" 
-              variant="grey"
-              @pressEnter="loadData"
-           />
-        </div>
-        <a-form-item style="margin-left: 40px; margin-top: 30px;">
-             <StandardButton type="search" icon="search" @click="loadData">搜索</StandardButton>
-             <StandardButton type="reset" icon="reload" @click="searchText = ''; loadData()">重置</StandardButton>
-        </a-form-item>
-      </a-form>
-    </GlassCard>
+  <WorkspacePage title="器材信息管理" variant="menu-list">
+    <template #actions>
+      <StandardButton type="add" icon="plus" @click="handleAdd">新增器材</StandardButton>
+    </template>
 
-    <!-- Table Container -->
-    <GlassCard variant="table">
-       <a-space warp style="margin-bottom: 20px;">
-         <StandardButton type="add" icon="plus" @click="handleAdd" style="width:112px;">新增器材</StandardButton>
-       </a-space>
+    <template #filters>
+      <TableSearchToolbar
+        v-model="keyword"
+        variant="menu-list"
+        :placeholder="quickSearchPlaceholder"
+        :loading="loading"
+        :filter-count="activeFilterCount"
+        :show-keyword="quickSearchEnabled"
+        @search="handleSearch"
+        @open-filter="filterModalVisible = true"
+        @reset="handleReset"
+      />
+    </template>
 
-        <StandardTable :configStyle="currentStyle" 
-           
-            :dataSource="tableData" 
-            :columns="columns" 
-            :pagination="pagination"
-            rowKey="id"
-            @change="handleTableChange"
-        >
+    <section class="workspace-subsection">
+      <StandardTable
+        :configStyle="currentStyle"
+        surface="menu-list"
+        :dataSource="tableData"
+        :columns="columns"
+        :pagination="pagination"
+        rowKey="id"
+        @change="handleTableChange"
+      >
         <template #bodyCell="{ column, record }: { column: any, record: Equipment }">
+            <template v-if="column.key === 'venueId'">
+                <span>{{ venueNameMap[record.venueId || 0] || '未绑定场馆' }}</span>
+            </template>
+            <template v-else-if="column.key === 'quantity'">
+                <span>{{ record.quantity ?? 0 }}</span>
+            </template>
             <template v-if="column.key === 'status'">
-                <a-tag :color="record.status === 'AVAILABLE' ? 'green' : (record.status === 'IN_USE' ? 'blue' : 'red')">
-                    {{ record.status === 'AVAILABLE' ? '可用' : (record.status === 'IN_USE' ? '使用中' : '维护中') }}
-                </a-tag>
+                <span :class="['status-pill', equipmentStatusTone(record.status)]">
+                    {{ equipmentStatusLabel(record.status) }}
+                </span>
             </template>
             <template v-if="column.key === 'action'">
-                <a-button type="link" @click="handleEdit(record)" style="color: #F4B53F">编辑</a-button>
+                <StandardButton type="link" size="sm" class="table-action-link" @click="handleEdit(record)">编辑</StandardButton>
                 <a-popconfirm title="确定删除吗?" @confirm="handleDelete(record.id)">
-                    <a-button type="link" danger>删除</a-button>
+                    <StandardButton type="link" size="sm" danger class="table-action-link">删除</StandardButton>
                 </a-popconfirm>
             </template>
         </template>
-        </StandardTable>
-     </GlassCard>
+      </StandardTable>
+    </section>
+  </WorkspacePage>
 
-    <!-- Modal -->
+    <AdvancedFilterModal
+      v-model:visible="filterModalVisible"
+      :fields="filterableFields"
+      :logic="filterLogic"
+      :rules="filterRules"
+      :text-suggestions="textSuggestions"
+      @apply="applyAdvancedFilters"
+    />
+
     <StandardModal
       v-model:visible="modalVisible"
       :title="modalTitle"
       @ok="handleModalOk"
     >
-      <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
-         <a-form-item label="器材名称">
-          <StandardInput v-model:value="formState.name" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        
-        <a-form-item label="数量">
-             <a-input-number v-model:value="formState.quantity" :min="0" class="modal-input-unified" />
-        </a-form-item>
-        
-        <a-form-item label="状态">
-             <a-select v-model:value="formState.status" class="modal-input-unified" placeholder="请选择状态">
-                <a-select-option value="NORMAL">正常</a-select-option>
-                <a-select-option value="DAMAGED">损坏</a-select-option>
+      <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }" class="workspace-modal-form">
+        <ConfiguredFormLayout :fields="primaryFormFields">
+          <template #field-name>
+            <a-form-item label="器材名称">
+              <StandardInput v-model:value="formState.name" variant="grey" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-description>
+            <a-form-item label="描述">
+              <StandardInput v-model:value="formState.description" variant="grey" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-venueId>
+            <a-form-item label="所属场馆">
+              <a-select v-model:value="formState.venueId" class="modal-input-unified" placeholder="请选择场馆">
+                <a-select-option v-for="item in venueOptions" :key="item.id" :value="item.id">{{ item.name }}</a-select-option>
+              </a-select>
+            </a-form-item>
+          </template>
+          <template #field-quantity>
+            <a-form-item label="数量">
+              <a-input-number v-model:value="formState.quantity" :min="0" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-status>
+            <a-form-item label="状态">
+              <a-select v-model:value="formState.status" class="modal-input-unified" placeholder="请选择状态">
+                <a-select-option value="AVAILABLE">可用</a-select-option>
+                <a-select-option value="IN_USE">使用中</a-select-option>
                 <a-select-option value="MAINTENANCE">维护中</a-select-option>
-             </a-select>
-        </a-form-item>
+              </a-select>
+            </a-form-item>
+          </template>
+        </ConfiguredFormLayout>
       </a-form>
     </StandardModal>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import request from '@/request';
-import { Equipment, PageResult } from '@/types';
+import { Equipment, PageResult, VenueResource } from '@/types';
 import { usePageStyle } from '@/hooks/usePageStyle';
 
 // Shared Components
-import GlassCard from '@/components/common/GlassCard.vue';
 import StandardInput from '@/components/common/StandardInput.vue';
 import StandardButton from '@/components/common/StandardButton.vue';
 import StandardTable from '@/components/common/StandardTable.vue';
 import StandardModal from '@/components/common/StandardModal.vue';
-
-const searchText = ref('');
-const tableData = ref<Equipment[]>([]);
+import WorkspacePage from '@/components/common/WorkspacePage.vue';
+import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
+import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
+import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
+import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
 
 // Page Style
 const { currentStyle, loadMenuConfig } = usePageStyle();
+const venueOptions = ref<VenueResource[]>([]);
 
-const pagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
+const {
+  filterableFields,
+  quickSearchEnabled,
+  quickSearchPlaceholder,
+  keyword,
+  filterLogic,
+  filterRules,
+  filterModalVisible,
+  activeFilterCount,
+  tableData,
+  pagination,
+  loading,
+  textSuggestions,
+  primaryFormFields,
+  ensureConfig,
+  loadData,
+  handleSearch,
+  handleReset,
+  handleTableChange,
+  applyAdvancedFilters,
+  buildColumns,
+  isFieldVisible,
+} = useConfiguredTablePage<Equipment>({
+  routePath: '/equipment',
 });
+
 const modalVisible = ref(false);
 const modalTitle = ref('新增器材');
 const formState = reactive<Equipment>({
@@ -109,37 +158,36 @@ const formState = reactive<Equipment>({
     name: '',
     description: '',
     status: 'AVAILABLE',
-    venueId: 0
+    venueId: 0,
+    quantity: 1,
 });
 
-const columns = [
+const venueNameMap = computed<Record<number, string>>(() => {
+    const map: Record<number, string> = {};
+    venueOptions.value.forEach((item) => {
+        if (item.id) {
+            map[item.id] = item.name;
+        }
+    });
+    return map;
+});
+
+const baseColumns = [
   { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '器材名称', dataIndex: 'name', key: 'name' },
+  { title: '所属场馆', dataIndex: 'venueId', key: 'venueId', width: 160 },
   { title: '描述', dataIndex: 'description', key: 'description' },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
   { title: '状态', dataIndex: 'status', key: 'status' },
   { title: '操作', key: 'action', width: 150 },
 ];
+const columns = computed(() => buildColumns(baseColumns));
 
-const loadData = () => {
-    request.get("/equipment/page", {
-        params: {
-            pageNum: pagination.current,
-            pageSize: pagination.pageSize,
-            name: searchText.value
-        }
-    }).then((res: any) => {
-        if(res.code === 200) {
-             const data = res.data as PageResult<Equipment>;
-            tableData.value = data.records;
-            pagination.total = data.total;
-        }
-    });
-};
-
-const handleTableChange = (pag: any) => {
-  pagination.current = pag.current;
-  pagination.pageSize = pag.pageSize;
-  loadData();
+const loadOptions = async () => {
+    const venueRes = await request.get('/admin/venues/page', { params: { pageNum: 1, pageSize: 200 } });
+    if (venueRes.code === 200) {
+        venueOptions.value = (venueRes.data as PageResult<VenueResource>).records;
+    }
 };
 
 const handleAdd = () => {
@@ -147,7 +195,9 @@ const handleAdd = () => {
     formState.id = 0;
     formState.name = '';
     formState.description = '';
-    formState.status = undefined as any;
+    formState.status = 'AVAILABLE';
+    formState.venueId = 0;
+    formState.quantity = 1;
     modalVisible.value = true;
 }
 
@@ -167,6 +217,18 @@ const handleModalOk = () => {
     });
 }
 
+const equipmentStatusLabel = (status: string) => {
+  if (status === 'IN_USE') return '使用中';
+  if (status === 'MAINTENANCE') return '维护中';
+  return '可用';
+};
+
+const equipmentStatusTone = (status: string) => {
+  if (status === 'IN_USE') return 'status-pill--muted';
+  if (status === 'MAINTENANCE') return 'status-pill--soft';
+  return 'status-pill--strong';
+};
+
 const handleDelete = (id: number) => {
      request.delete("/equipment/" + id).then((res: any) => {
         if(res.code === 200) {
@@ -176,30 +238,12 @@ const handleDelete = (id: number) => {
     });
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadMenuConfig();
+  await ensureConfig();
+  await loadOptions();
   loadData();
 });
 </script>
 
-<style scoped>
- :deep(.ant-input) { width: 260px; }
- :deep(.ant-select-selector) { background-color: #F7F5F5 !important; height: 40px !important; display: flex !important; align-items: center !important; border: none !important; border-radius: 8px !important; }
- :deep(.ant-select-selection-item), :deep(.ant-select-selection-placeholder) { line-height: 40px !important; display: flex !important; align-items: center !important; }
-
- /* Fix Vertical Alignment for Form Items */
- :deep(.ant-form-item .ant-row) {
-     align-items: center;
- }
- :deep(.ant-form-item-control-input) {
-     min-height: 40px;
- }
- /* Modal Button & Title Adjustments */
- :deep(.ant-modal-close) {
-     top: 5px !important;
-     right: 5px !important;
- }
- :deep(.ant-modal-header) {
-     padding: 10px 20px !important;
- }
-</style>
+<style scoped></style>

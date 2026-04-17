@@ -1,28 +1,26 @@
 <template>
-  <div class="mobile-container">
-    <div class="glass-card mobile-card">
-        <div class="pc-icon-wrapper">
-            <!-- 极简电脑图标 SVG -->
-            <svg class="pc-icon-svg" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 4H4C2.89543 4 2 4.89543 2 6V15C2 16.1046 2.89543 17 4 17H20C21.1046 17 22 16.1046 22 15V6C22 4.89543 21.1046 4 20 4ZM4 6H20V15H4V6ZM2 19H22V21H2V19Z" />
-            </svg>
+  <div class="mobile-page">
+    <div class="mobile-card mono-surface">
+      <div class="mobile-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 4H4C2.89543 4 2 4.89543 2 6V15C2 16.1046 2.89543 17 4 17H20C21.1046 17 22 16.1046 22 15V6C22 4.89543 21.1046 4 20 4ZM4 6H20V15H4V6ZM2 19H22V21H2V19Z" />
+        </svg>
+      </div>
+
+      <h1>确认登录 PC 端</h1>
+      <p class="mobile-desc">请确认这是你本人发起的登录操作，确认后网页端会直接进入后台。</p>
+
+      <div class="mobile-actions">
+        <StandardButton v-if="!isConfirmed" type="primary" class="confirm-btn" @click="confirmLogin">
+          {{ status === '正在确认...' ? '处理中...' : '确认登录' }}
+        </StandardButton>
+
+        <div v-else class="success-block">
+          <div class="success-mark">✓</div>
+          <div class="success-title">已允许登录</div>
+          <div class="success-desc">网页端正在继续登录流程</div>
         </div>
-        <h1 class="title">登录 PC 端</h1>
-        <p class="desc">即将登录网页版，请确认是本人操作</p>
-        
-        <!-- 移除丑陋的 session ID 显示 -->
-        
-        <div class="actions">
-            <button v-if="!isConfirmed" @click="confirmLogin" class="confirm-btn">
-                {{ status === '正在确认...' ? '处理中...' : '确认登录' }}
-            </button>
-            <div v-else class="success-msg">
-                <div class="check-icon">✓</div>
-                <p style="font-size: 18px; color: #4caf50; font-weight: bold;">已允许登录</p>
-            </div>
-        </div>
-        
-        <!-- 移除底部状态文字 -->
+      </div>
     </div>
   </div>
 </template>
@@ -31,6 +29,7 @@
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import StandardButton from '@/components/common/StandardButton.vue';
 
 const route = useRoute();
 const uuid = route.params.uuid;
@@ -38,129 +37,111 @@ const status = ref('准备登录');
 const isConfirmed = ref(false);
 
 const confirmLogin = async () => {
-    status.value = '正在确认...';
-    try {
-        const res = await axios.post('/api/login', { uuid });
-        if (res.data.success) {
-            isConfirmed.value = true;
-            status.value = 'PC端登录确认成功!';
-        } else {
-            status.value = '失败: ' + res.data.message;
-        }
-    } catch (e) {
-        status.value = '网络错误';
+  status.value = '正在确认...';
+
+  try {
+    const res = await axios.post('/api/login', { uuid });
+    if (res.data.success) {
+      isConfirmed.value = true;
+      status.value = 'PC端登录确认成功';
+    } else {
+      status.value = `失败: ${res.data.message}`;
     }
+  } catch (error) {
+    status.value = '网络错误';
+  }
 };
 </script>
 
 <style scoped>
-.mobile-container {
-    position: fixed; /* 强制覆盖全屏，跳出 #app 的 flex 限制 */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #fcf9da 0%, #f7f1e3 100%); /* 确保背景色正确 */
-    z-index: 999;
+.mobile-page {
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mobile-card {
-    width: 92%; /* 稍微加宽 */
-    max-width: 450px; /* 放宽限制 */
-    min-height: 500px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    text-align: center;
-    
-    /* Windows 7 Aero 风格极致透明毛玻璃 */
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
-    backdrop-filter: blur(10px); /* 适度模糊，保证通透 */
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 28px;
-    padding: 40px;
-    
-    /* 强质感边框和光泽 */
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-top: 1px solid rgba(255, 255, 255, 0.8); /* 顶部高光 */
-    border-left: 1px solid rgba(255, 255, 255, 0.8);
-    
-    box-shadow: 
-        0 8px 32px 0 rgba(31, 38, 135, 0.1),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.2); /* 内部微光 */
+  width: min(460px, 100%);
+  padding: 32px;
+  text-align: center;
 }
 
-@media screen and (min-width: 768px) {
-    .mobile-card {
-        max-width: 400px;
-    }
+.mobile-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: var(--mono-radius-lg);
+  border: 1px solid var(--mono-line);
+  background: var(--mono-surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mono-text);
 }
 
-/* 顶部大图标 */
-.pc-icon-wrapper {
-    margin-bottom: 30px; 
-    display: flex;
-    justify-content: center;
+.mobile-icon svg {
+  width: 28px;
+  height: 28px;
 }
 
-.pc-icon-svg {
-    width: 60px; /* 缩小图标，更加精致 */
-    height: 60px;
-    color: #444; 
-    opacity: 0.9;
+.mobile-card h1 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--mono-text);
+  letter-spacing: -0.03em;
 }
 
-.title {
-    font-size: 24px;
-    font-weight: 800;
-    color: #333;
-    margin-bottom: 10px;
+.mobile-desc {
+  margin: 14px 0 0;
+  color: var(--mono-text-secondary);
+  line-height: 1.7;
 }
 
-.desc {
-    margin-bottom: 40px;
-    color: #666;
-    font-size: 15px;
+.mobile-actions {
+  margin-top: 28px;
 }
 
-/* 确认按钮样式 - 完全复刻 PC 端登录按钮 */
 .confirm-btn {
-    width: 100%;
-    background: linear-gradient(135deg, #ffcb51 0%, #ffb347 100%);
-    border: none;
-    padding: 16px;
-    font-size: 18px;
-    font-weight: 500; /* 不加粗，优雅一点 */
-    color: #222; /* 纯黑太硬，用深灰 */
-    border-radius: 22.5px; /* 完全圆角 */
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(255, 203, 81, 0.4);
-    transition: all 0.2s;
-    letter-spacing: 1px;
+  width: 100%;
+  height: 48px;
+  border-radius: var(--mono-radius-pill);
+  background: var(--shad-primary-bg) !important;
+  color: var(--shad-primary-foreground) !important;
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.confirm-btn:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 8px rgba(255, 203, 81, 0.3);
+.success-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.check-icon {
-    font-size: 5em;
-    color: #4caf50;
-    margin-bottom: 20px;
-    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.success-mark {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--mono-radius-pill);
+  border: 1px solid var(--mono-line);
+  background: var(--mono-surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: var(--mono-text);
 }
 
-@keyframes popIn {
-    0% { transform: scale(0); opacity: 0; }
-    80% { transform: scale(1.2); }
-    100% { transform: scale(1); opacity: 1; }
+.success-title {
+  margin-top: 18px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--mono-text);
 }
 
-.status-text {
-    display: none; /* 隐藏底部状态文字，太丑 */
+.success-desc {
+  margin-top: 6px;
+  color: var(--mono-text-secondary);
+  font-size: 14px;
 }
 </style>

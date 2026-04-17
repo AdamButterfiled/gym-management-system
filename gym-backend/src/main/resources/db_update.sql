@@ -1,57 +1,88 @@
--- 教练管理与字典表结构脚本
-
--- 1. 创建教练表 (gym_coach)
--- 如果表不存在则创建
-CREATE TABLE IF NOT EXISTS `gym_coach` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `name` varchar(50) NOT NULL COMMENT '教练姓名',
-  `gender` int(11) DEFAULT NULL COMMENT '性别 1:男 0:女',
-  `age` int(11) DEFAULT NULL COMMENT '年龄',
-  `phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
-  `specialization` varchar(255) DEFAULT NULL COMMENT '擅长项目(如: 瑜伽, 力量训练)',
-  `entry_date` date DEFAULT NULL COMMENT '入职日期',
-  `intro` text COMMENT '个人简介',
-  `status` int(11) DEFAULT '1' COMMENT '状态 1:在职 0:离职',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练表';
-
--- 2. 创建字典表 (sys_dict)
--- 用于存储系统通用的字典配置，如性别、状态等
 CREATE TABLE IF NOT EXISTS `sys_dict` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `dict_type` varchar(50) NOT NULL COMMENT '字典类型 (如: gender)',
-  `dict_label` varchar(50) NOT NULL COMMENT '字典标签 (如: 男)',
-  `dict_value` varchar(50) NOT NULL COMMENT '字典键值 (如: 1)',
+  `dict_type` varchar(50) NOT NULL COMMENT '字典类型',
+  `dict_label` varchar(50) NOT NULL COMMENT '字典标签',
+  `dict_value` varchar(50) NOT NULL COMMENT '字典键值',
   `sort` int(11) DEFAULT '0' COMMENT '排序字段',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据字典表';
 
--- 3. 初始化字典数据
 INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
 SELECT 'gender', '男', '1', 1
-WHERE NOT EXISTS (
-  SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'gender' AND `dict_value` = '1'
-);
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'gender' AND `dict_value` = '1');
 
 INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
 SELECT 'gender', '女', '0', 2
-WHERE NOT EXISTS (
-  SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'gender' AND `dict_value` = '0'
-);
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'gender' AND `dict_value` = '0');
 
 INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
 SELECT 'coach_status', '在职', '1', 1
-WHERE NOT EXISTS (
-  SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'coach_status' AND `dict_value` = '1'
-);
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'coach_status' AND `dict_value` = '1');
 
 INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
 SELECT 'coach_status', '离职', '0', 2
-WHERE NOT EXISTS (
-  SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'coach_status' AND `dict_value` = '0'
-);
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'coach_status' AND `dict_value` = '0');
 
--- Add styling column to sys_menu
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'booking_status', '待确认', 'CREATED', 1
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'booking_status' AND `dict_value` = 'CREATED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'booking_status', '待支付', 'PENDING_PAY', 2
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'booking_status' AND `dict_value` = 'PENDING_PAY');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'booking_status', '已确认', 'CONFIRMED', 3
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'booking_status' AND `dict_value` = 'CONFIRMED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'booking_status', '已取消', 'CANCELLED', 4
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'booking_status' AND `dict_value` = 'CANCELLED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'booking_status', '已完成', 'COMPLETED', 5
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'booking_status' AND `dict_value` = 'COMPLETED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'booking_status', '已签到', 'CHECKED_IN', 6
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'booking_status' AND `dict_value` = 'CHECKED_IN');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'booking_status', '已退款', 'REFUNDED', 7
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'booking_status' AND `dict_value` = 'REFUNDED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'payment_status', '待支付', 'UNPAID', 1
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'payment_status' AND `dict_value` = 'UNPAID');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'payment_status', '已支付', 'PAID', 2
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'payment_status' AND `dict_value` = 'PAID');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'payment_status', '已关闭', 'CLOSED', 3
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'payment_status' AND `dict_value` = 'CLOSED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'payment_status', '已退款', 'REFUNDED', 4
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'payment_status' AND `dict_value` = 'REFUNDED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'slot_status', '开放', 'OPEN', 1
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'slot_status' AND `dict_value` = 'OPEN');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'slot_status', '锁定', 'LOCKED', 2
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'slot_status' AND `dict_value` = 'LOCKED');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'slot_status', '已满', 'FULL', 3
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'slot_status' AND `dict_value` = 'FULL');
+
+INSERT INTO `sys_dict` (`dict_type`, `dict_label`, `dict_value`, `sort`)
+SELECT 'slot_status', '关闭', 'CLOSED', 4
+WHERE NOT EXISTS (SELECT 1 FROM `sys_dict` WHERE `dict_type` = 'slot_status' AND `dict_value` = 'CLOSED');
+
 SET @component_style_exists = (
   SELECT COUNT(*)
   FROM information_schema.COLUMNS
@@ -61,16 +92,23 @@ SET @component_style_exists = (
 );
 SET @component_style_sql = IF(
   @component_style_exists = 0,
-  'ALTER TABLE `sys_menu` ADD COLUMN `component_style` VARCHAR(50) DEFAULT NULL COMMENT ''组件样式 (NULL:Inherit, glass:Glass, default:Default)''',
+  'ALTER TABLE `sys_menu` ADD COLUMN `component_style` VARCHAR(50) DEFAULT NULL COMMENT ''组件样式''',
   'SELECT 1'
 );
 PREPARE component_style_stmt FROM @component_style_sql;
 EXECUTE component_style_stmt;
 DEALLOCATE PREPARE component_style_stmt;
 
--- Initial data update for component_style
--- Make '系统管理' (System Management) menu use 'glass' style by default as an example
-UPDATE `sys_menu`
-SET `component_style` = 'glass'
-WHERE `path` = '/sys/menu'
-  AND (`component_style` IS NULL OR `component_style` = '');
+CREATE TABLE IF NOT EXISTS `sys_form_config` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `page_key` varchar(100) NOT NULL COMMENT '页面唯一键',
+  `route_path` varchar(150) NOT NULL COMMENT '路由路径',
+  `page_title` varchar(100) NOT NULL COMMENT '页面标题',
+  `enabled` tinyint(1) DEFAULT '1' COMMENT '是否启用',
+  `config_json` longtext NOT NULL COMMENT '页面配置JSON',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_form_config_page_key` (`page_key`),
+  UNIQUE KEY `uk_form_config_route_path` (`route_path`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='表单配置表';

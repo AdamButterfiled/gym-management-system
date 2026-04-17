@@ -1,0 +1,69 @@
+{
+  "canvas": {
+    "width": 570,
+    "height": 592
+  },
+  "reference": {
+    "svg": "/Users/adambutterfield/vue-project/my-project/src/assets/bear/generated-cv/transparent-svg/idle-open.svg",
+    "centerX": 267.5,
+    "bottom": 526.0,
+    "proxyHeight": 355.0
+  },
+  "palette": [
+    1,
+    177,
+    216,
+    232,
+    251
+  ],
+  "sequences": {
+    "intro": {
+      "video": "打招呼_3950_0.mp4",
+      "fps": 24.0,
+      "frameCount": 121,
+      "scale": 0.662313,
+      "offsetX": 51.255,
+      "offsetY": 59.731
+    },
+    "idle": {
+      "video": "稳定版idle.mp4",
+      "fps": 23.076713,
+      "frameCount": 11,
+      "scale": 0.38587,
+      "offsetX": 46.011,
+      "offsetY": 59.098
+    },
+    "error": {
+      "video": "登录失败.mp4",
+      "fps": 23.608221,
+      "frameCount": 81,
+      "scale": 0.430825,
+      "offsetX": 116.28,
+      "offsetY": 59.416
+    },
+    "success": {
+      "video": "登录成功.mp4",
+      "fps": 23.608221,
+      "frameCount": 43,
+      "scale": 0.626102,
+      "offsetX": 40.851,
+      "offsetY": 59.554
+    },
+    "password": {
+      "video": "password.mp4",
+      "fps": 24.0,
+      "frameCount": 81,
+      "scale": 0.573506,
+      "offsetX": 97.456,
+      "offsetY": 59.166
+    },
+    "idleInteract": {
+      "video": "处于idle状态下的点击反馈.mp4",
+      "fps": 23.357509,
+      "frameCount": 73,
+      "scale": 0.588723,
+      "offsetX": 117.67,
+      "offsetY": 59.143
+    }
+  }
+}

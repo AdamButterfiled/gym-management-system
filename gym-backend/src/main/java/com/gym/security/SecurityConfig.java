@@ -1,5 +1,7 @@
 package com.gym.security;
 
+import com.gym.config.SpaRouteSupport;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -42,8 +44,12 @@ public class SecurityConfig {
 
                 // 2. 授权管理：决定哪些 URL 需要权限，哪些可以直接访问。
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+
                         // 下面这些路径允许所有人访问 (permitAll)
                         .requestMatchers(
+                                "/",
+                                "/index.html",
                                 "/user/login",
                                 "/user/register",
                                 "/user/export",
@@ -56,6 +62,9 @@ public class SecurityConfig {
                                 "/v3/api-docs/**", // 如果有 Swagger 文档
                                 "/swagger-ui/**")
                         .permitAll()
+
+                        // 允许浏览器直接访问前端页面路由，交给 Vue Router 接管。
+                        .requestMatchers(SpaRouteSupport.frontendRouteMatcher()).permitAll()
 
                         // 允许所有的 OPTIONS 请求 (解决跨域预检问题)
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()

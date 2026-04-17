@@ -7,6 +7,8 @@ import com.gym.mapper.MenuMapper;
 import com.gym.service.MenuService;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,15 +23,40 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
         wrapper.orderByAsc(Menu::getSort);
 
         List<Menu> allMenus = this.list(wrapper);
+        Map<Long, Menu> menuMap = allMenus.stream()
+                .filter(menu -> menu.getId() != null)
+                .collect(Collectors.toMap(Menu::getId, Function.identity(), (left, right) -> left));
 
-        // 如果是超级管理员，返回所有
+        return allMenus.stream()
+                .filter(menu -> hasRoleAccess(menu, role))
+                .filter(menu -> isMenuEnabled(menu, menuMap))
+                .collect(Collectors.toList());
+    }
+
+    private boolean hasRoleAccess(Menu menu, String role) {
         if ("ADMIN".equals(role)) {
-            return allMenus;
+            return true;
         }
 
-        // 否则通过字符串包含来过滤 (简单实现)
-        return allMenus.stream()
-                .filter(menu -> menu.getRoles() != null && menu.getRoles().contains(role))
-                .collect(Collectors.toList());
+        return menu.getRoles() != null && menu.getRoles().contains(role);
+    }
+
+    private boolean isMenuEnabled(Menu menu, Map<Long, Menu> menuMap) {
+        Menu current = menu;
+
+        while (current != null) {
+            if (Boolean.TRUE.equals(current.getHidden())) {
+                return false;
+            }
+
+            Long parentId = current.getParentId();
+            if (parentId == null || parentId == 0) {
+                return true;
+            }
+
+            current = menuMap.get(parentId);
+        }
+
+        return true;
     }
 }

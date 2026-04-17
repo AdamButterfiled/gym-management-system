@@ -1,130 +1,128 @@
 <template>
   <div class="batch-delete-wrapper">
-    <transition name="slide-width">
-        <a-button 
-           v-if="active"
-           type="text" 
-           size="small" 
-           class="cancel-delete-btn"
-           @click="toggleMode"
-       >
-           取消
-       </a-button>
-    </transition>
+    <a-tooltip v-if="!active" title="批量删除管理">
+      <StandardButton
+        type="ghost"
+        size="icon"
+        icon="delete"
+        class="trash-btn"
+        aria-label="批量删除管理"
+        @click="toggleMode"
+      />
+    </a-tooltip>
 
-    <a-popconfirm 
-       :title="popconfirmTitle || '确定删除选中项吗?'" 
-       @confirm="handleConfirm"
-       :disabled="!active || count === 0"
-       okText="删除"
-       cancelText="取消"
-       :okButtonProps="{ shape: 'round', size: 'small', danger: true }"
-       :cancelButtonProps="{ shape: 'round', size: 'small' }"
-   >
-        <a-tooltip :title="active ? (count > 0 ? '点击删除选中项' : '退出删除模式') : '批量删除管理'">
-            <a-button 
-               type="text"
-               size="small" 
-               class="trash-btn"
-               :class="{ 'active-jitter': active }"
-               @click="handleClick"
-            >
-               <DeleteOutlined :style="{ color: active ? '#ff4d4f' : 'inherit' }" />
-            </a-button>
-       </a-tooltip>
-   </a-popconfirm>
+    <template v-else>
+      <StandardButton
+        type="ghost"
+        size="sm"
+        class="cancel-delete-btn"
+        @click="toggleMode"
+      >
+        取消
+      </StandardButton>
 
-   <transition name="slide-width">
-       <span v-if="active && count > 0" class="delete-count">
-           已选中 {{ count }} 项
-       </span>
-   </transition>
+      <a-popconfirm
+        :title="popconfirmTitle || '确定删除选中项吗?'"
+        @confirm="handleConfirm"
+        :disabled="count === 0"
+        okText="删除"
+        cancelText="取消"
+        :okButtonProps="{ shape: 'round', size: 'small', type: 'primary' }"
+        :cancelButtonProps="{ shape: 'round', size: 'small' }"
+      >
+        <StandardButton
+          type="primary"
+          size="sm"
+          icon="delete"
+          class="confirm-delete-btn"
+          :disabled="count === 0"
+        >
+          <span>全部删除</span>
+        </StandardButton>
+      </a-popconfirm>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { DeleteOutlined } from '@ant-design/icons-vue';
+import StandardButton from '@/components/common/StandardButton.vue';
 
 const props = defineProps<{
-    active: boolean;      // Is delete mode active?
-    count: number;        // Number of selected items
-    popconfirmTitle?: string;
+  active: boolean;
+  count: number;
+  popconfirmTitle?: string;
 }>();
 
 const emit = defineEmits<{
-    (e: 'update:active', value: boolean): void;
-    (e: 'delete'): void;
+  (e: 'update:active', value: boolean): void;
+  (e: 'delete'): void;
 }>();
 
 const toggleMode = () => {
-    emit('update:active', !props.active);
-};
-
-const handleClick = () => {
-    if (!props.active) {
-        // Activate mode
-        emit('update:active', true);
-    } else if (props.count === 0) {
-        // Deactivate mode if nothing selected
-         emit('update:active', false);
-    }
-    // If active and count > 0, popconfirm handles the click
+  emit('update:active', !props.active);
 };
 
 const handleConfirm = () => {
-    emit('delete');
+  emit('delete');
 };
 </script>
 
 <style scoped>
- .batch-delete-wrapper { 
-     display: flex; 
-     align-items: center;
-     justify-content: flex-end; 
-     min-width: 32px;
- }
- 
- /* Jitter Animation */
- @keyframes jitter {
-   0% { transform: rotate(0deg); }
-   25% { transform: rotate(10deg); }
-   50% { transform: rotate(0deg); }
-   75% { transform: rotate(-10deg); }
-   100% { transform: rotate(0deg); }
- }
- .active-jitter .anticon {
-   display: inline-block;
-   animation: jitter 0.3s ease-in-out infinite; 
- }
+.batch-delete-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 42px;
+}
 
- .trash-btn { font-size: 16px; color: #666; transition: color 0.3s; }
- .trash-btn:hover { color: #333; }
+.trash-btn,
+.cancel-delete-btn,
+.confirm-delete-btn {
+  height: 42px;
+  border: 1px solid var(--mono-control-border);
+  border-radius: var(--mono-radius-pill);
+  background: var(--mono-control-bg) !important;
+  color: var(--mono-control-text-muted) !important;
+  box-shadow: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
- :global(.dark) .trash-btn { color: rgba(255, 255, 255, 0.45); }
- :global(.dark) .trash-btn:hover { color: rgba(255, 255, 255, 0.85); }
+.trash-btn {
+  width: 42px;
+}
 
- .cancel-delete-btn { 
-     margin-right: 8px; 
-     color: #999;
-     font-size: 12px;
-     white-space: nowrap;
- }
- .delete-count { 
-     margin-left: 4px; 
-     font-size: 13px; 
-     color: #ff4d4f; 
-     font-weight: bold; 
-     white-space: nowrap;
- }
- 
- /* Slide Width Transition */
- .slide-width-enter-active, .slide-width-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
- }
- .slide-width-enter-from, .slide-width-leave-to {
-  width: 0;
-  opacity: 0;
-  margin: 0;
- }
+.trash-btn:hover,
+.cancel-delete-btn:hover {
+  border-color: var(--mono-control-border-strong);
+  background: var(--mono-control-bg-hover) !important;
+  color: var(--mono-control-text) !important;
+}
+
+.cancel-delete-btn {
+  padding: 0 14px;
+}
+
+.confirm-delete-btn {
+  min-width: 122px;
+  padding: 0 18px;
+  border-color: var(--shad-primary-bg) !important;
+  background: var(--shad-primary-bg) !important;
+  color: var(--shad-primary-foreground) !important;
+  gap: 8px;
+}
+
+.confirm-delete-btn:hover {
+  border-color: var(--shad-primary-hover) !important;
+  background: var(--shad-primary-hover) !important;
+  color: var(--shad-primary-foreground) !important;
+}
+
+.confirm-delete-btn[disabled] {
+  border-color: var(--mono-control-border) !important;
+  background: var(--mono-control-bg-disabled) !important;
+  color: var(--mono-control-text-disabled) !important;
+}
 </style>

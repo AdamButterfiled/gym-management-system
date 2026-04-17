@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalTime;
 
 @Data
@@ -35,4 +36,10 @@ public class Venue implements Serializable {
     private LocalTime closeTime;
 
     private String image;
+
+    private String coverImage;
+
+    private String layoutJson;
+
+    private BigDecimal pricePerHour;
 }

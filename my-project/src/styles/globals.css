@@ -1,0 +1,195 @@
+@layer theme, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tw-animate-css";
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: var(--mono-bg-elevated);
+  --foreground: var(--mono-text);
+  --card: var(--mono-bg-elevated);
+  --card-foreground: var(--mono-text);
+  --popover: var(--mono-bg-elevated);
+  --popover-foreground: var(--mono-text);
+  --primary: var(--shad-primary-bg, #111111);
+  --primary-foreground: var(--shad-primary-foreground, #ffffff);
+  --secondary: var(--mono-surface-soft);
+  --secondary-foreground: var(--mono-text);
+  --muted: var(--mono-surface-muted);
+  --muted-foreground: var(--mono-text-secondary);
+  --accent: var(--mono-surface-soft);
+  --accent-foreground: var(--mono-text);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: var(--mono-control-border);
+  --input: var(--mono-control-border);
+  --ring: var(--shad-ring, rgba(17, 17, 17, 0.16));
+  --radius: var(--mono-radius-lg);
+  --sidebar: var(--mono-surface-bg-elevated);
+  --sidebar-foreground: var(--mono-text);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--mono-surface-soft);
+  --sidebar-accent-foreground: var(--mono-text);
+  --sidebar-border: var(--mono-control-border);
+  --sidebar-ring: var(--ring);
+  --chart-1: var(--theme-accent);
+  --chart-2: #3b82f6;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+html.route-app .rounded-full {
+  border-radius: var(--mono-radius-pill) !important;
+}
+
+/*
+ * Tailwind Preflight is intentionally recreated only for non-login routes.
+ * This preserves shadcn-vue's base expectations without mutating the finished login page.
+ */
+html.route-app *,
+html.route-app ::before,
+html.route-app ::after,
+html.route-app ::backdrop,
+html.route-app ::file-selector-button {
+  box-sizing: border-box;
+}
+
+html.route-app {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.route-app hr {
+  height: 0;
+  color: inherit;
+  border-top-width: 1px;
+}
+
+html.route-app abbr:where([title]) {
+  -webkit-text-decoration: underline dotted;
+  text-decoration: underline dotted;
+}
+
+html.route-app ::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+
+html.route-app textarea {
+  resize: vertical;
+}
+
+html.route-app ::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+html.route-app ::-webkit-date-and-time-value {
+  min-height: 1lh;
+  text-align: inherit;
+}
+
+html.route-app ::-webkit-datetime-edit {
+  display: inline-flex;
+}
+
+html.route-app ::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+html.route-app ::-webkit-datetime-edit,
+html.route-app ::-webkit-datetime-edit-year-field,
+html.route-app ::-webkit-datetime-edit-month-field,
+html.route-app ::-webkit-datetime-edit-day-field,
+html.route-app ::-webkit-datetime-edit-hour-field,
+html.route-app ::-webkit-datetime-edit-minute-field,
+html.route-app ::-webkit-datetime-edit-second-field,
+html.route-app ::-webkit-datetime-edit-millisecond-field,
+html.route-app ::-webkit-datetime-edit-meridiem-field {
+  padding-block: 0;
+}
+
+html.route-app ::-webkit-calendar-picker-indicator {
+  line-height: 1;
+}
+
+html.route-app :-moz-focusring {
+  outline: auto;
+}
+
+html.route-app :-moz-ui-invalid {
+  box-shadow: none;
+}
+
+html.route-app progress {
+  vertical-align: baseline;
+}
+
+html.route-app img,
+html.route-app video,
+html.route-app canvas,
+html.route-app audio,
+html.route-app iframe,
+html.route-app embed,
+html.route-app object {
+  display: block;
+  vertical-align: middle;
+}
+
+html.route-app img,
+html.route-app video {
+  max-width: 100%;
+  height: auto;
+}
+
+html.route-app ::-webkit-inner-spin-button,
+html.route-app ::-webkit-outer-spin-button {
+  height: auto;
+}
+
+html.route-app [hidden]:where(:not([hidden='until-found'])) {
+  display: none !important;
+}

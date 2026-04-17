@@ -35,7 +35,10 @@ public class PasswordMigrationRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        checkAndUpdateUser("admin", "admin");
+        userService.list().forEach(user -> {
+            String defaultPassword = "ADMIN".equals(user.getRole()) ? "admin" : "123456";
+            checkAndUpdateUser(user.getUsername(), defaultPassword);
+        });
     }
 
     private void checkAndUpdateUser(String username, String defaultPassword) {

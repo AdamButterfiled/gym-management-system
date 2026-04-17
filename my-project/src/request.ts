@@ -1,25 +1,41 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { message } from 'ant-design-vue';
-import router from '@/router';
+import { clearAuthStorage, getLoginRedirectPath, getStoredUser } from '@/utils/auth';
+
+const normalizeBaseUrl = (url?: string) => (url ? url.replace(/\/+$/, '') : '');
+
+const resolveApiBaseUrl = () => {
+    const configuredBaseUrl = normalizeBaseUrl(
+        import.meta.env.VITE_API_BASE_URL || import.meta.env.VUE_APP_API_BASE_URL
+    );
+    if (configuredBaseUrl) {
+        return configuredBaseUrl;
+    }
+
+    if (typeof window === 'undefined') {
+        return 'http://localhost:9090';
+    }
+
+    if (import.meta.env.DEV) {
+        return '';
+    }
+
+    const { protocol, hostname } = window.location;
+    return `${protocol}//${hostname}:9090`;
+};
 
 const request = axios.create({
-    baseURL: 'http://localhost:9090',
+    baseURL: resolveApiBaseUrl(),
     timeout: 5000
 });
 
 request.interceptors.request.use(config => {
+    config.headers = config.headers || {};
     config.headers['Content-Type'] = 'application/json;charset=utf-8';
 
-    // 1. 从浏览器缓存 (localStorage) 中取出用户信息
-    const userJson = localStorage.getItem("user");
-    if (userJson) {
-        const user = JSON.parse(userJson);
-        // 2. 如果用户已登录由 Token
-        if (user.token) {
-            // 3. 关键步骤：把 Token 放入请求头的 Authorization 字段
-            // 格式必须是 "Bearer " + token，这是 JWT 的标准规范
-            config.headers['Authorization'] = 'Bearer ' + user.token;
-        }
+    const user = getStoredUser();
+    if (user && typeof user.token === 'string' && user.token.trim()) {
+        config.headers['Authorization'] = 'Bearer ' + user.token;
     }
 
     return config;
@@ -28,7 +44,19 @@ request.interceptors.request.use(config => {
 });
 
 // 防止重复弹出多个提示
-let isLoggingOut = false;
+let authRedirectTimer: ReturnType<typeof setTimeout> | null = null;
+let networkErrorMessageTimer: ReturnType<typeof setTimeout> | null = null;
+
+interface ApiResult {
+    code?: number;
+    msg?: string;
+    data?: unknown;
+}
+
+interface ApiErrorPayload {
+    msg?: string;
+    message?: string;
+}
 
 request.interceptors.response.use(response => {
     let res = response.data;
@@ -38,35 +66,60 @@ request.interceptors.response.use(response => {
     }
     // If string, try query parsing (for compatibility)
     if (typeof res === 'string') {
-        res = res ? JSON.parse(res) : res;
+        try {
+            res = res ? JSON.parse(res) : res;
+        } catch {
+            return res;
+        }
     }
-    // 业务层 401：后端返回的 code === 401 (token 过期)
-    if (res.code === 401) {
-        handleTokenExpired();
-        return Promise.reject(new Error('登录已过期'));
+    const result = typeof res === 'object' && res !== null ? res as ApiResult : null;
+    if (result?.code === 401 || result?.code === 403) {
+        handleAuthExpired(result.msg);
+        return Promise.reject(new Error(result.msg || '登录状态已失效'));
     }
     return res;
 }, error => {
-    // HTTP 层 401：后端直接返回 401 状态码
-    if (error.response && error.response.status === 401) {
-        handleTokenExpired();
+    const responseStatus = error.response?.status;
+    if (responseStatus === 401 || responseStatus === 403) {
+        handleAuthExpired();
     } else {
-        message.error('网络请求失败，请稍后重试');
+        showRequestError(error);
     }
     return Promise.reject(error);
 });
 
-function handleTokenExpired() {
-    if (isLoggingOut) return; // 防止多次触发
-    isLoggingOut = true;
+function handleAuthExpired(customMessage?: string) {
+    clearAuthStorage();
 
-    message.warning('登录已过期，请重新登录');
-    localStorage.removeItem('user');
+    if (authRedirectTimer) {
+        return;
+    }
 
-    // 延迟跳转，让用户看到提示
-    setTimeout(() => {
-        router.push('/login');
-        isLoggingOut = false;
+    message.warning(customMessage || '登录状态已失效，请重新登录');
+
+    if (typeof window === 'undefined' || window.location.pathname === '/login') {
+        return;
+    }
+
+    authRedirectTimer = setTimeout(() => {
+        authRedirectTimer = null;
+        window.location.replace(getLoginRedirectPath());
+    }, 1200);
+}
+
+function showRequestError(error: AxiosError<ApiErrorPayload>) {
+    if (networkErrorMessageTimer) return;
+
+    const responseData = error.response?.data;
+    const responseMessage =
+        responseData && typeof responseData === 'object'
+            ? responseData.msg || responseData.message
+            : '';
+    const fallbackMessage = error.response ? '请求失败，请稍后重试' : '网络请求失败，请稍后重试';
+
+    message.error(responseMessage || fallbackMessage);
+    networkErrorMessageTimer = setTimeout(() => {
+        networkErrorMessageTimer = null;
     }, 1500);
 }
 

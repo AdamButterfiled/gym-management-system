@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -24,6 +25,8 @@ public class Coach implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    private Long userId;
 
     /**
      * 教练姓名
@@ -69,4 +72,10 @@ public class Coach implements Serializable {
      * 0: 离职 (Resigned)
      */
     private Integer status;
+
+    private String avatar;
+
+    private BigDecimal hourlyPrice;
+
+    private BigDecimal rating;
 }

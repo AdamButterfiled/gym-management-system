@@ -25,6 +25,10 @@ public class User implements Serializable {
 
     private String realName;
 
+    private String nickname;
+
+    private String email;
+
     /**
      * Role: ADMIN, STAFF, MEMBER
      */
@@ -40,6 +44,11 @@ public class User implements Serializable {
      * Member Type: REGULAR, VIP
      */
     private String type;
+
+    /**
+     * User status: ACTIVE, INACTIVE
+     */
+    private String status;
 
     private LocalDateTime createdAt;
 

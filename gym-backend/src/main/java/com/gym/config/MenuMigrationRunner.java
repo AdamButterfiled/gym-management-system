@@ -71,5 +71,36 @@ public class MenuMigrationRunner implements CommandLineRunner {
         } else {
             logger.info("系统主菜单 (ID: 999) 已存在，跳过迁移。");
         }
+
+        ensureFormConfigMenu();
+    }
+
+    private void ensureFormConfigMenu() {
+        Menu existing = menuService.getOne(new LambdaQueryWrapper<Menu>()
+            .eq(Menu::getPath, "/sys/form-config")
+            .last("limit 1"));
+        if (existing != null) {
+            logger.info("表单管理菜单已存在，跳过创建。");
+            return;
+        }
+
+        Menu systemMenu = menuService.getOne(new LambdaQueryWrapper<Menu>()
+            .eq(Menu::getTitle, "系统管理")
+            .last("limit 1"));
+        Long parentId = systemMenu != null ? systemMenu.getId() : 999L;
+
+        Menu menu = new Menu();
+        menu.setTitle("表单管理");
+        menu.setName("FormConfigList");
+        menu.setPath("/sys/form-config");
+        menu.setComponent("sys/FormConfigList");
+        menu.setIcon("FormOutlined");
+        menu.setParentId(parentId);
+        menu.setSort(4);
+        menu.setRoles("ADMIN");
+        menu.setHidden(false);
+        menu.setComponentStyle("glass");
+        menuService.save(menu);
+        logger.info("表单管理菜单已创建，父级菜单 ID: {}", parentId);
     }
 }

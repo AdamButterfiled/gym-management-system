@@ -13,12 +13,8 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    // 1. 设置密钥：这个密钥非常重要，它是生成和验证 Token 的 "密码"。
-    // 只有拥有这个密钥的服务器才能签发合法的 Token。
-    // 在生产环境中，这个值应该存在 application.yml 里，并且很长很复杂。
     private static final String SECRET_KEY = "mySuperSecretKeyForGymManagementSystem123456";
 
-    // 2. 设置过期时间：这里设为 1 天 (毫秒)
     private static final long EXPIRATION_TIME = 86400000;
 
     private Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());

@@ -11,8 +11,8 @@
       ]"
       :width="keywordWidth"
       :placeholder="placeholder"
-      @update:value="$emit('update:modelValue', String($event ?? ''))"
-      @pressEnter="$emit('search')"
+      @update:value="handleKeywordUpdate"
+      @pressEnter="handleKeywordEnter"
     >
       <template #prefix>
         <Search class="toolbar-search-icon" aria-hidden="true" />
@@ -26,18 +26,14 @@
         variant === 'menu-list' && 'menu-search-actions',
       ]"
     >
-      <StandardButton type="search" icon="search" :loading="loading" @click="$emit('search')">
-        查询
-      </StandardButton>
-
       <StandardButton
         v-if="showFilter"
-        type="filter"
+        type="search"
         icon="filter"
-        @click="$emit('openFilter')"
+        @click="handleOpenFilter"
       >
         <span>筛选</span>
-        <span v-if="filterCount > 0" class="filter-count">{{ filterCount }}</span>
+        <span v-if="filterCount > 0" class="filter-count filter-count--primary">{{ filterCount }}</span>
       </StandardButton>
 
       <StandardButton type="reset" icon="reload" @click="$emit('reset')">
@@ -48,11 +44,12 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount } from 'vue';
 import { Search } from 'lucide-vue-next';
 import StandardButton from '@/components/common/StandardButton.vue';
 import StandardInput from '@/components/common/StandardInput.vue';
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   modelValue?: string;
   placeholder?: string;
   loading?: boolean;
@@ -72,12 +69,51 @@ withDefaults(defineProps<{
   variant: 'default',
 });
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void;
   (e: 'search'): void;
   (e: 'openFilter'): void;
   (e: 'reset'): void;
 }>();
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+function clearScheduledSearch() {
+  if (!searchTimer) {
+    return;
+  }
+  clearTimeout(searchTimer);
+  searchTimer = undefined;
+}
+
+function scheduleSearch() {
+  clearScheduledSearch();
+  searchTimer = setTimeout(() => {
+    emit('search');
+  }, 280);
+}
+
+function handleKeywordUpdate(value: string | number | null | undefined) {
+  emit('update:modelValue', String(value ?? ''));
+  if (!props.showKeyword) {
+    return;
+  }
+  scheduleSearch();
+}
+
+function handleKeywordEnter() {
+  clearScheduledSearch();
+  emit('search');
+}
+
+function handleOpenFilter() {
+  clearScheduledSearch();
+  emit('openFilter');
+}
+
+onBeforeUnmount(() => {
+  clearScheduledSearch();
+});
 </script>
 
 <style scoped>
@@ -144,7 +180,7 @@ defineEmits<{
   box-sizing: border-box !important;
   min-height: 44px;
   height: 44px;
-  border-radius: 999px !important;
+  border-radius: var(--mono-radius-pill) !important;
   background: rgba(255, 255, 255, 0.72) !important;
   border: 1px solid rgba(17, 17, 17, 0.1) !important;
   box-shadow: none !important;
@@ -228,7 +264,16 @@ defineEmits<{
   line-height: 1;
 }
 
-:deep(.std-button--filter .filter-count) {
+.filter-count--primary {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+:deep(.std-button--filter .filter-count),
+:deep(.std-button--search .filter-count) {
   background: rgba(17, 17, 17, 0.08);
+}
+
+:deep(.std-button--search .filter-count--primary) {
+  background: rgba(255, 255, 255, 0.18);
 }
 </style>

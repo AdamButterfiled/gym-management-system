@@ -140,7 +140,7 @@
          <a-form-item label="路由Name">
              <StandardInput v-model:value="formState.name" placeholder="如: UserList (对应前端路由配置)" variant="grey" class="modal-input-unified" />
          </a-form-item>
-         
+
          <a-form-item label="路由Path">
              <StandardInput v-model:value="formState.path" placeholder="如: /user 或 /sys/menu" variant="grey" class="modal-input-unified" />
          </a-form-item>
@@ -164,7 +164,7 @@
                 </a-select-option>
              </a-select>
          </a-form-item>
-         
+
          <!-- 新增：表格样式配置 -->
          <a-form-item label="表格样式" :extra="isGlobalTraditional ? '经典风格下此选项已禁用，页面使用统一页壳外观' : '子菜单优先于父菜单配置'">
              <a-tooltip :title="isGlobalTraditional ? '当前为经典风格，表格将跟随统一的经典页面风格' : ''">
@@ -181,7 +181,7 @@
          </a-form-item>
 
          <a-form-item label="权限角色">
-              <a-checkbox-group v-model:value="selectedRoles">
+              <a-checkbox-group v-model:value="selectedRoles" data-field-key="roles">
                   <a-checkbox value="ADMIN">管理员</a-checkbox>
                   <a-checkbox value="STAFF">员工</a-checkbox>
                   <a-checkbox value="COACH">教练</a-checkbox>
@@ -547,7 +547,7 @@ onMounted(() => {
      min-height: var(--menu-search-input-height);
   }
 
- .menu-list-page :deep(.standard-input-wrapper.menu-search-input .std-input) {
+.menu-list-page :deep(.standard-input-wrapper.menu-search-input .std-input) {
      box-sizing: border-box !important;
      background: var(--menu-search-bg) !important;
      border: 1px solid var(--menu-search-border) !important;
@@ -628,7 +628,7 @@ onMounted(() => {
      color: var(--menu-search-icon-active) !important;
   }
 
- .menu-native-button {
+.menu-native-button {
      appearance: none;
      -webkit-appearance: none;
      -moz-appearance: none;
@@ -781,49 +781,9 @@ onMounted(() => {
      background: #fafaf9 !important;
  }
 
- .menu-list-page .openai-table :deep(.ant-table-cell-fix-left),
- .menu-list-page .openai-table :deep(.ant-table-cell-fix-right) {
+.menu-list-page .openai-table :deep(.ant-table-cell-fix-left),
+.menu-list-page .openai-table :deep(.ant-table-cell-fix-right) {
      background: #ffffff !important;
- }
-
- :deep(.ant-input-number-input) { height: 40px; }
- :deep(.ant-input) { width: 260px; }
-
- 
- :deep(.ant-select-selector), :deep(.ant-tree-select-selector) { 
-     background-color: var(--mono-control-bg-hover) !important;
-     border: none !important;
-     height: 40px !important;  
-     align-items: center; 
-     border-radius: 8px !important;
- }
- :deep(.ant-select-selection-search-input) { height: 40px !important; }
-
- /* Fix Vertical Alignment for Form Items using standard row centering */
- :deep(.ant-form-item .ant-row) {
-     align-items: center;
- }
- :deep(.ant-form-item-control-input) {
-     min-height: 40px;
- }
-
- .menu-config-form {
-     padding-top: 2px;
- }
-
- /* Modal Button & Title Adjustments */
- :deep(.ant-modal-close) {
-     top: 5px !important;    /* Move X down (inwards) */
-     right: 5px !important;  /* Move X left (inwards) */
- }
- :deep(.ant-modal-header) {
-     padding: 10px 20px !important;  /* Move Title closer to top-left (reduce top/left padding slightly) */
- }
- 
- :deep(.ant-radio-group) {
-     display: flex;
-     flex-wrap: wrap;
-     gap: 8px;
  }
 
  :deep(.ant-form-item-extra) {
@@ -893,15 +853,25 @@ onMounted(() => {
  }
 
  .menu-pill {
-     margin-inline-end: 8px;
-     padding: 2px 10px;
-     border-radius: 999px;
-     border: 1px solid var(--tag-surface-border) !important;
-     background: var(--tag-surface-bg) !important;
-     color: var(--tag-surface-text) !important;
-     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
-     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
- }
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin-inline-end: 8px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--tag-surface-border) !important;
+      background: var(--tag-surface-bg) !important;
+      color: var(--tag-surface-text) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.35;
+      letter-spacing: 0;
+      text-align: center;
+      vertical-align: middle;
+      box-sizing: border-box;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+   }
 
  .menu-pill--glass {
      color: var(--tag-tone-cyan-text) !important;
@@ -932,7 +902,7 @@ onMounted(() => {
      color: var(--tag-tone-sky-text) !important;
      background: var(--tag-tone-sky-bg) !important;
      border-color: var(--tag-tone-sky-border) !important;
- }
+  }
 
  .menu-action-group {
      flex-wrap: wrap;
@@ -1031,8 +1001,8 @@ onMounted(() => {
      transition: color 0.22s ease, transform var(--menu-tree-icon-duration) var(--menu-tree-icon-ease);
  }
 
- .menu-list-page :deep(.ant-table-row-expand-icon::before),
- .menu-list-page :deep(.ant-table-row-expand-icon::after) {
+.menu-list-page :deep(.ant-table-row-expand-icon::before),
+.menu-list-page :deep(.ant-table-row-expand-icon::after) {
      content: '' !important;
      position: absolute !important;
      display: block !important;
@@ -1100,7 +1070,7 @@ onMounted(() => {
      }
  }
 
- .menu-list-page :deep(.transparent-glass-mode .ant-table-cell-fix-right) {
+.menu-list-page :deep(.transparent-glass-mode .ant-table-cell-fix-right) {
      background: rgba(255, 255, 255, 0.12) !important;
      backdrop-filter: blur(10px);
      -webkit-backdrop-filter: blur(10px);
@@ -1133,7 +1103,7 @@ onMounted(() => {
      color: rgba(255, 255, 255, 0.92) !important;
  }
 
- html.dark .menu-list-page :deep(.transparent-glass-mode .ant-table-cell-fix-right) {
+html.dark .menu-list-page :deep(.transparent-glass-mode .ant-table-cell-fix-right) {
      background: rgba(18, 18, 18, 0.55) !important;
  }
 </style>

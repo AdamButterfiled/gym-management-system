@@ -65,7 +65,7 @@
             </template>
 
             <template v-else-if="column.key === 'role'">
-                <span :class="['role-pill', `role-pill--${getRoleTone(record.role)}`]">
+                <span :class="['status-pill', `status-pill--${getRoleTone(record.role)}`]">
                     {{ getRoleLabel(record.role) }}
                 </span>
             </template>
@@ -73,6 +73,24 @@
             <template v-else-if="column.key === 'phone'">
                 <span :class="['soft-text', { 'soft-text--muted': !record.phone }]">
                     {{ record.phone || '未绑定手机号' }}
+                </span>
+            </template>
+
+            <template v-else-if="column.key === 'email'">
+                <span :class="['soft-text', { 'soft-text--muted': !record.email }]">
+                    {{ record.email || '未设置邮箱' }}
+                </span>
+            </template>
+
+            <template v-else-if="column.key === 'status'">
+                <span :class="['soft-text', { 'soft-text--muted': !record.status }]">
+                    {{ record.status || '未设置状态' }}
+                </span>
+            </template>
+
+            <template v-else-if="column.key === 'createdAt'">
+                <span :class="['soft-text', { 'soft-text--muted': !record.createdAt }]">
+                    {{ record.createdAt || '未记录' }}
                 </span>
             </template>
 
@@ -93,36 +111,92 @@
       @apply="applyAdvancedFilters"
     />
 
-    <!-- 编辑/新增 弹窗 (Glassy Modal) -->
-     <StandardModal
-      v-model:visible="modalVisible"
-      :title="modalTitle"
-      @ok="handleModalOk"
-    >
-      <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
-        <a-form-item label="用户名">
-          <StandardInput v-model:value="formState.username" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="昵称">
-          <StandardInput v-model:value="formState.nickname" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="手机号">
-            <StandardInput v-model:value="formState.phone" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="邮箱">
-            <StandardInput v-model:value="formState.email" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="余额">
-          <a-input-number v-model:value="formState.balance" :min="0" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="角色">
-             <a-select v-model:value="formState.role" class="modal-input-unified" placeholder="请选择角色">
+    <!-- 编辑/新增弹窗 -->
+    <StandardModal
+       v-model:visible="modalVisible"
+       :title="modalTitle"
+       width="720px"
+       @ok="handleModalOk"
+     >
+      <a-form
+        :model="formState"
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 18 }"
+        class="workspace-modal-form user-modal-form"
+      >
+        <ConfiguredFormLayout :fields="primaryFormFields">
+          <template #field-username>
+            <a-form-item label="用户名">
+              <StandardInput
+                v-model:value="formState.username"
+                :noMargin="true"
+                placeholder="请输入用户名"
+                class="modal-input-unified"
+              />
+            </a-form-item>
+          </template>
+          <template #field-realName>
+            <a-form-item label="真实姓名">
+              <StandardInput
+                v-model:value="formState.realName"
+                :noMargin="true"
+                placeholder="请输入真实姓名"
+                class="modal-input-unified"
+              />
+            </a-form-item>
+          </template>
+          <template #field-nickname>
+            <a-form-item label="昵称">
+              <StandardInput
+                v-model:value="formState.nickname"
+                :noMargin="true"
+                placeholder="请输入昵称"
+                class="modal-input-unified"
+              />
+            </a-form-item>
+          </template>
+          <template #field-phone>
+            <a-form-item label="手机号">
+              <StandardInput
+                v-model:value="formState.phone"
+                :noMargin="true"
+                placeholder="请输入手机号"
+                class="modal-input-unified"
+              />
+            </a-form-item>
+          </template>
+          <template #field-email>
+            <a-form-item label="邮箱">
+              <StandardInput
+                v-model:value="formState.email"
+                :noMargin="true"
+                placeholder="请输入邮箱"
+                class="modal-input-unified"
+              />
+            </a-form-item>
+          </template>
+          <template #field-balance>
+            <a-form-item label="初始余额">
+              <a-input-number
+                v-model:value="formState.balance"
+                :min="0"
+                :controls="false"
+                placeholder="0"
+                class="modal-input-unified modal-input-unified--number"
+              />
+            </a-form-item>
+          </template>
+          <template #field-role>
+            <a-form-item label="角色">
+              <a-select v-model:value="formState.role" class="modal-input-unified" placeholder="请选择角色">
                 <a-select-option value="MEMBER">会员</a-select-option>
                 <a-select-option value="COACH">教练</a-select-option>
                 <a-select-option value="STAFF">员工</a-select-option>
                 <a-select-option value="ADMIN">管理员</a-select-option>
-             </a-select>
-        </a-form-item>
+              </a-select>
+            </a-form-item>
+          </template>
+        </ConfiguredFormLayout>
       </a-form>
     </StandardModal>
   </div>
@@ -137,6 +211,7 @@ import { usePageStyle } from '@/hooks/usePageStyle';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
 import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
 import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
+import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
 
 // Shared Components
 import StandardInput from '@/components/common/StandardInput.vue';
@@ -163,6 +238,7 @@ const {
   pagination,
   loading,
   textSuggestions,
+  primaryFormFields,
   ensureConfig,
   loadData,
   handleSearch,
@@ -170,6 +246,7 @@ const {
   handleTableChange,
   applyAdvancedFilters,
   buildColumns,
+  isFieldVisible,
 } = useConfiguredTablePage<User>({
   routePath: '/user',
 });
@@ -208,10 +285,14 @@ const baseColumns = [
     customHeaderCell: () => ({ class: 'column-username-head' }),
     customCell: () => ({ class: 'column-username-cell' }),
   },
+  { title: '真实姓名', dataIndex: 'realName', key: 'realName', width: 160 },
   { title: '昵称', dataIndex: 'nickname', key: 'nickname', width: 220 },
+  { title: '邮箱', dataIndex: 'email', key: 'email', width: 220 },
   { title: '角色', dataIndex: 'role', key: 'role', width: 140 },
   { title: '手机号', dataIndex: 'phone', key: 'phone', width: 190 },
   { title: '余额', dataIndex: 'balance', key: 'balance', width: 140 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 120 },
+  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
 ];
 const columns = computed(() => buildColumns(baseColumns));
 
@@ -314,7 +395,7 @@ onMounted(() => {
 }
 
 .user-list-table :deep(.ant-checkbox-inner) {
-  border-radius: 6px !important;
+  border-radius: var(--mono-radius-xs) !important;
 }
 
 .mono-id {
@@ -339,7 +420,7 @@ onMounted(() => {
   grid-column: 2;
   width: 32px;
   height: 32px;
-  border-radius: 12px;
+  border-radius: var(--mono-radius-sm);
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: #f7f7f5;
   color: var(--text-primary);
@@ -378,43 +459,6 @@ onMounted(() => {
   color: var(--text-tertiary);
 }
 
-.role-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 68px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.role-pill--admin {
-  background: #f7f7f5;
-  border-color: rgba(17, 17, 17, 0.08);
-  color: #111111;
-}
-
-.role-pill--coach {
-  background: #f7f7f5;
-  border-color: rgba(17, 17, 17, 0.08);
-  color: #111111;
-}
-
-.role-pill--member {
-  background: #f7f7f5;
-  border-color: rgba(17, 17, 17, 0.08);
-  color: #111111;
-}
-
-.role-pill--staff {
-  background: #f7f7f5;
-  border-color: rgba(17, 17, 17, 0.08);
-  color: #111111;
-}
-
 .balance-cell {
   display: flex;
   justify-content: center;
@@ -433,7 +477,7 @@ onMounted(() => {
 .delete-shell :deep(.cancel-delete-btn) {
   height: 36px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--mono-radius-pill);
   background: #ffffff;
   color: var(--text-secondary);
   display: inline-flex;
@@ -464,32 +508,30 @@ onMounted(() => {
   font-weight: 600;
 }
 
-:deep(.ant-input-number-input) {
-  height: 40px;
+.user-modal-form {
+  padding-top: 4px;
 }
 
-:deep(.ant-select-selector) {
-  background-color: #F7F5F5 !important;
-  height: 40px !important;
-  display: flex !important;
-  align-items: center !important;
-  border: none !important;
-  border-radius: 8px !important;
+.user-modal-form :deep(.ant-form-item) {
+  margin-bottom: 22px;
 }
 
-:deep(.ant-select-selection-item),
-:deep(.ant-select-selection-placeholder) {
-  line-height: 40px !important;
-  display: flex !important;
-  align-items: center !important;
+.user-modal-form :deep(.ant-form-item-control-input) {
+  min-height: 44px;
 }
 
-:deep(.ant-form-item .ant-row) {
-  align-items: center;
+.user-modal-form :deep(.modal-input-unified) {
+  width: 100%;
 }
 
-:deep(.ant-form-item-control-input) {
-  min-height: 40px;
+.user-modal-form :deep(.modal-input-unified--number .ant-input-number-handler-wrap) {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .user-modal-form :deep(.ant-form-item) {
+    margin-bottom: 18px;
+  }
 }
 
 </style>
@@ -553,30 +595,6 @@ html.dark .user-list-page .user-avatar {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.92);
-}
-
-html.dark .user-list-page .role-pill--admin {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.96);
-}
-
-html.dark .user-list-page .role-pill--coach {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.96);
-}
-
-html.dark .user-list-page .role-pill--member {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.96);
-}
-
-html.dark .user-list-page .role-pill--staff {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.96);
 }
 
 </style>

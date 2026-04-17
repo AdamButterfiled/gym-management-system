@@ -42,7 +42,7 @@
           <a-form-item class="login-button-container">
             <a-button
               type="primary"
-              style="width: 250px; height: 38px; top: 15px; border-radius: 20px;"
+              style="width: 250px; height: 38px; top: 15px; border-radius: var(--mono-radius-lg);"
               @click="handleLogin"
               @mouseenter="handleLoginHover"
               @mouseleave="handleLoginLeave"
@@ -194,7 +194,7 @@ const onPasswordBlur = () => {
     background-color: white;
     width: 80%;
     max-width: 1000px;
-    border-radius: 30px;
+    border-radius: var(--mono-radius-xl);
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     margin: auto;
@@ -300,7 +300,7 @@ const onPasswordBlur = () => {
     width: 220px;
     height: 220px;
     background-color: #007bff;
-    border-radius: 50%;
+    border-radius: var(--mono-radius-pill);
     position: relative;
   }
   
@@ -309,7 +309,7 @@ const onPasswordBlur = () => {
     width: 22px;
     height: 22px;
     background-color: white;
-    border-radius: 50%;
+    border-radius: var(--mono-radius-pill);
     position: absolute;
     display: flex;
     justify-content: center;
@@ -338,7 +338,7 @@ const onPasswordBlur = () => {
     width: 10px;
     height: 10px;
     background-color: black;
-    border-radius: 50%;
+    border-radius: var(--mono-radius-pill);
     transition: transform 0.1s ease-out;
   }
   
@@ -357,13 +357,13 @@ const onPasswordBlur = () => {
   }
   
   .mouth.smile {
-    border-radius: 0 0 100px 100px;
+    border-radius: 0 0 var(--mono-radius-xl) var(--mono-radius-xl);
     height: 18px;
     bottom: 100px;
   }
   
   .mouth.sad {
-    border-radius: 100px 100px 0 0;
+    border-radius: var(--mono-radius-xl) var(--mono-radius-xl) 0 0;
     height: 18px;
     bottom: 100px;
   }

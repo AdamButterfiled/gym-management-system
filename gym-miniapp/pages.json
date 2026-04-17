@@ -1,0 +1,22 @@
+{
+  "pages": [
+    { "path": "pages/login/index", "style": { "navigationBarTitleText": "健身房登录" } },
+    { "path": "pages/member/home/index", "style": { "navigationBarTitleText": "会员首页" } },
+    { "path": "pages/member/venues/index", "style": { "navigationBarTitleText": "场馆预约" } },
+    { "path": "pages/member/courses/index", "style": { "navigationBarTitleText": "团课秒杀" } },
+    { "path": "pages/member/coaches/index", "style": { "navigationBarTitleText": "私教预约" } },
+    { "path": "pages/member/bookings/index", "style": { "navigationBarTitleText": "我的预约" } },
+    { "path": "pages/member/wallet/index", "style": { "navigationBarTitleText": "钱包与资产" } },
+    { "path": "pages/member/checkin/index", "style": { "navigationBarTitleText": "签到核销" } },
+    { "path": "pages/coach/home/index", "style": { "navigationBarTitleText": "教练工作台" } },
+    { "path": "pages/coach/approvals/index", "style": { "navigationBarTitleText": "预约审批" } },
+    { "path": "pages/coach/metrics/index", "style": { "navigationBarTitleText": "体测记录" } },
+    { "path": "pages/coach/logs/index", "style": { "navigationBarTitleText": "训练日志" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "Gym Smart Reserve",
+    "navigationBarBackgroundColor": "#f7f2e8",
+    "backgroundColor": "#f7f2e8"
+  }
+}

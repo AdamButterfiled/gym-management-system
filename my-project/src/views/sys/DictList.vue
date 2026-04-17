@@ -1,14 +1,14 @@
 <template>
-  <div class="dict-list-page">
+  <WorkspacePage title="数据字典管理">
     <a-row :gutter="gutterSize" class="dict-layout">
         <!-- Left Pane: Dictionary Types -->
         <a-col :span="6">
-            <GlassCard class="left-pane-card" style="height: 600px; display: flex; flex-direction: column; overflow: hidden; padding-right: 15px; margin-top: 0px;">
+            <section class="left-pane-card">
                 <div class="pane-header">
                     <div class="title">字典类型</div>
                     <div class="header-actions">
                          <a-tooltip title="新增类型" v-if="!isTypeDeleteMode">
-                             <a-button type="link" size="small" @click="handleAddType"><PlusOutlined /></a-button>
+                             <StandardButton type="icon" size="icon-sm" icon="plus" @click="handleAddType" />
                         </a-tooltip>
                         
                          <!-- Left Trash Action Group -> Refactored to use Component -->
@@ -68,36 +68,27 @@
                         @change="handlePageChange"
                     />
                 </div>
-            </GlassCard>
+            </section>
         </a-col>
 
         <!-- Right Pane: Dictionary Data -->
         <a-col :span="18">
-            <!-- 1. Search Box Component -> Variant Grey as requested -->
-            <GlassCard variant="search">
-                 <a-form layout="inline" style="padding-top: 0px;">
-                    <div style="margin-left: 14px;">
-                        <div class="form-label">字典标签</div>
-                        <StandardInput 
-                            v-model:value="dataSearchText" 
-                            placeholder="请输入字典标签" 
-                            style="width: 200px;" 
-                            variant="grey"
-                            @pressEnter="loadDictData" 
-                        />
-                    </div>
-                    <a-form-item style="margin-left: 40px; margin-top: 30px;">
-                         <StandardButton type="search" icon="search" @click="loadDictData">搜索</StandardButton>
-                         <StandardButton type="reset" icon="reload" @click="dataSearchText = ''; loadDictData()">重置</StandardButton>
-                    </a-form-item>
-                 </a-form>
-            </GlassCard>
+            <div class="filter-row dict-filter-row">
+                <TableSearchToolbar
+                    v-model="keyword"
+                    :placeholder="quickSearchPlaceholder"
+                    :loading="loading"
+                    :filter-count="activeFilterCount"
+                    :show-keyword="quickSearchEnabled"
+                    @search="handleSearch"
+                    @open-filter="filterModalVisible = true"
+                    @reset="handleReset"
+                />
+                <StandardButton type="add" icon="plus" @click="handleAddData">新增数据</StandardButton>
+            </div>
 
-            <!-- 2. Table Box Component -->
-            <GlassCard variant="table">
-                 <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
-                    <StandardButton type="add" icon="plus" @click="handleAddData">新增数据</StandardButton>
-                    
+            <section class="workspace-subsection">
+                 <div class="dict-toolbar">
                     <!-- Right Trash Action Group -> Refactored to use Component -->
                     <BatchDeleteButton 
                         v-model:active="isDataDeleteMode"
@@ -107,7 +98,6 @@
                  </div>
 
                 <StandardTable :configStyle="currentStyle" 
-                   
                     :dataSource="tableData" 
                     :columns="columns" 
                     :pagination="false"
@@ -117,19 +107,31 @@
                     class="dict-table"
                 >
                     <template #bodyCell="{ column, record }">
+                        <template v-if="column.key === 'status'">
+                            <span>{{ record.status === 0 ? '停用' : '正常' }}</span>
+                        </template>
                         <template v-if="column.key === 'action'">
                             <a-space>
-                                <a-button type="link" @click="handleEdit(record)" style="color: #F4B53F">编辑</a-button>
+                                <StandardButton type="link" size="sm" class="table-action-link" @click="handleEdit(record)">编辑</StandardButton>
                                 <a-popconfirm title="确定删除吗?" @confirm="handleDelete(record.id)" okText="删除" cancelText="取消" :okButtonProps="{ shape: 'round', size: 'small', danger: true }" :cancelButtonProps="{ shape: 'round', size: 'small' }">
-                                    <a-button type="link" danger>删除</a-button>
+                                    <StandardButton type="link" size="sm" danger class="table-action-link">删除</StandardButton>
                                 </a-popconfirm>
                             </a-space>
                         </template>
                     </template>
                 </StandardTable>
-            </GlassCard>
+            </section>
         </a-col>
     </a-row>
+
+    <AdvancedFilterModal
+      v-model:visible="filterModalVisible"
+      :fields="dictFilterableFields"
+      :logic="filterLogic"
+      :rules="filterRules"
+      :text-suggestions="textSuggestions"
+      @apply="applyAdvancedFilters"
+    />
 
     <!-- Modal: Type Add/Edit -->
     <!-- Modal: Type Add/Edit -->
@@ -138,19 +140,32 @@
       :title="typeModalTitle"
       @ok="handleTypeModalOk"
     >
-      <a-form :model="typeForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
-        <a-form-item label="字典名称">
-          <StandardInput v-model:value="typeForm.dictName" placeholder="如: 性别" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="字典类型">
-          <StandardInput v-model:value="typeForm.dictType" placeholder="如: sys_user_sex" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="状态">
-             <a-select v-model:value="typeForm.status" class="modal-input-unified">
+      <a-form
+        :model="typeForm"
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 18 }"
+        class="workspace-modal-form"
+      >
+        <ConfiguredFormLayout :fields="typeFormFields">
+          <template #field-dictName>
+            <a-form-item label="字典名称">
+              <StandardInput v-model:value="typeForm.dictName" placeholder="如: 性别" variant="grey" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-dictType>
+            <a-form-item label="字典类型">
+              <StandardInput v-model:value="typeForm.dictType" placeholder="如: sys_user_sex" variant="grey" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-status>
+            <a-form-item label="状态">
+              <a-select v-model:value="typeForm.status" class="modal-input-unified">
                 <a-select-option :value="1">正常</a-select-option>
                 <a-select-option :value="0">停用</a-select-option>
-             </a-select>
-        </a-form-item>
+              </a-select>
+            </a-form-item>
+          </template>
+        </ConfiguredFormLayout>
       </a-form>
     </StandardModal>
 
@@ -161,66 +176,126 @@
       :title="dataModalTitle"
       @ok="handleDataModalOk"
     >
-      <a-form :model="dataForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
-        <a-form-item label="字典标签">
-          <StandardInput v-model:value="dataForm.dictLabel" placeholder="如: 男" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="字典键值">
-          <StandardInput v-model:value="dataForm.dictValue" placeholder="如: 1" variant="grey" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="排序">
-          <a-input-number v-model:value="dataForm.dictSort" class="modal-input-unified" />
-        </a-form-item>
-        <a-form-item label="状态">
+      <a-form
+        :model="dataForm"
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 18 }"
+        class="workspace-modal-form"
+      >
+        <ConfiguredFormLayout :fields="dataFormFields">
+          <template #field-dictLabel>
+            <a-form-item label="字典标签">
+              <StandardInput v-model:value="dataForm.dictLabel" placeholder="如: 男" variant="grey" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-dictValue>
+            <a-form-item label="字典键值">
+              <StandardInput v-model:value="dataForm.dictValue" placeholder="如: 1" variant="grey" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-sort>
+            <a-form-item label="排序">
+              <a-input-number v-model:value="dataForm.dictSort" class="modal-input-unified" />
+            </a-form-item>
+          </template>
+          <template #field-status>
+            <a-form-item label="状态">
               <div class="checkbox-wrapper" style="height: 40px;">
-                 <a-radio-group v-model:value="dataForm.status">
-                    <a-radio :value="1">正常</a-radio>
-                    <a-radio :value="0">停用</a-radio>
-                 </a-radio-group>
+                <a-radio-group v-model:value="dataForm.status">
+                  <a-radio :value="1">正常</a-radio>
+                  <a-radio :value="0">停用</a-radio>
+                </a-radio-group>
               </div>
-        </a-form-item>
-        <a-form-item label="备注">
-           <a-textarea v-model:value="dataForm.remark" class="modal-input-unified" style="min-height: 80px;" />
-        </a-form-item>
+            </a-form-item>
+          </template>
+          <template #field-remark>
+            <a-form-item label="备注">
+              <a-textarea v-model:value="dataForm.remark" class="modal-input-unified" style="min-height: 80px;" />
+            </a-form-item>
+          </template>
+        </ConfiguredFormLayout>
       </a-form>
     </StandardModal>
-  </div>
+  </WorkspacePage>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { 
-    SearchOutlined, PlusOutlined,
+    SearchOutlined,
     FolderOutlined
 } from '@ant-design/icons-vue';
 import request from '@/request';
 import { usePageStyle } from '@/hooks/usePageStyle';
+import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
+import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
+import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
+import type { FormFilterRule } from '@/types/formConfig';
+import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
 
 // Standard Components
-import GlassCard from '@/components/common/GlassCard.vue';
 import StandardTable from '@/components/common/StandardTable.vue';
 import StandardButton from '@/components/common/StandardButton.vue';
 import StandardInput from '@/components/common/StandardInput.vue';
 import BatchDeleteButton from '@/components/common/BatchDeleteButton.vue';
 import StandardModal from '@/components/common/StandardModal.vue';
+import WorkspacePage from '@/components/common/WorkspacePage.vue';
 import { useStore } from 'vuex';
 
 interface SysDict {
   id?: number;
+  dictName?: string;
   dictType: string;
   dictLabel: string;
   dictValue: string;
   sort: number;
+  status?: number;
+  remark?: string;
 }
 
 const typeSearchText = ref('');
-const dataSearchText = ref('');
 const typeList = ref<string[]>([]);
 const currentType = ref<string>('');
 const selectedTypeKeys = ref<string[]>([]); // For Left Pane
 const selectedRowKeys = ref<number[]>([]); // For Right Pane
-const tableData = ref<SysDict[]>([]);
+const fixedRules = computed<FormFilterRule[]>(() =>
+    currentType.value
+        ? [{
+            id: 'dict-type-fixed',
+            fieldKey: 'dictType',
+            queryKey: 'dictType',
+            controlType: 'text',
+            operator: 'equals',
+            matchMode: 'exact',
+            value: currentType.value,
+        }]
+        : []
+);
+const {
+    filterableFields,
+    quickSearchEnabled,
+    quickSearchPlaceholder,
+    keyword,
+    filterLogic,
+    filterRules,
+    filterModalVisible,
+    activeFilterCount,
+    tableData,
+    loading,
+    textSuggestions,
+    ensureConfig,
+    loadData,
+    handleSearch,
+    handleReset,
+    applyAdvancedFilters,
+    buildColumns,
+    getTargetFields,
+} = useConfiguredTablePage<SysDict>({
+    routePath: '/sys/dict',
+    pageSize: 500,
+    fixedRules,
+});
 
 // Modal State
 const typeModalVisible = ref(false);
@@ -236,6 +311,9 @@ const isTraditional = computed(() => store.state.themeSettings.styleMode === 'tr
 
 // Dynamic gutter: Traditional mode has tighter spacing (cards closer together)
 const gutterSize = computed(() => isTraditional.value ? 12 : 24); 
+const dictFilterableFields = computed(() =>
+    filterableFields.value.filter((field) => field.fieldKey !== 'dictType')
+);
 
 // Use Hook for Page Style
 const { currentStyle, loadMenuConfig } = usePageStyle();
@@ -284,12 +362,18 @@ const onSearchChange = () => {
     pagination.current = 1;
 };
 
-const columns = [
+const baseColumns = [
+  { title: '字典类型', dataIndex: 'dictType', key: 'dictType', width: 180 },
   { title: '字典标签', dataIndex: 'dictLabel', key: 'dictLabel' },
   { title: '字典键值', dataIndex: 'dictValue', key: 'dictValue' },
   { title: '排序', dataIndex: 'sort', key: 'sort', width: 80 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+  { title: '备注', dataIndex: 'remark', key: 'remark', width: 220 },
   { title: '操作', key: 'action', width: 200, fixed: 'right' },
 ];
+const columns = computed(() => buildColumns(baseColumns));
+const typeFormFields = computed(() => getTargetFields('type-form'));
+const dataFormFields = computed(() => getTargetFields('data-form'));
 
 const typeForm = reactive({
     id: undefined,
@@ -325,7 +409,7 @@ const handleTypeSelect = (type: string) => {
     // Reset Data Delete Mode on switch
     isDataDeleteMode.value = false;
     selectedRowKeys.value = [];
-    loadDictData();
+    loadData();
 };
 
 const onTypeCheck = (type: string, checked: boolean) => {
@@ -347,19 +431,6 @@ const rowSelection = computed(() => {
         onChange: (keys: number[]) => { selectedRowKeys.value = keys; }
     };
 });
-
-const loadDictData = () => {
-    if(!currentType.value) return;
-    request.get("/dict/type", { params: { type: currentType.value } }).then((res: any) => {
-        if(res.code === 200) {
-            let list = res.data;
-            if(dataSearchText.value) {
-                list = list.filter((item: SysDict) => item.dictLabel.includes(dataSearchText.value));
-            }
-            tableData.value = list;
-        }
-    });
-};
 
 const handleBatchDeleteTypes = () => {
     if(selectedTypeKeys.value.length === 0) return;
@@ -384,7 +455,7 @@ const handleBatchDelete = () => {
              message.success("批量删除成功");
              selectedRowKeys.value = [];
              isDataDeleteMode.value = false; // Reset mode on success
-             loadDictData();
+             loadData();
         } else {
             message.error(res.msg);
         }
@@ -458,7 +529,7 @@ const handleDataModalOk = () => {
         if(res.code === 200) {
             message.success("保存成功");
             dataModalVisible.value = false;
-            loadDictData();
+            loadData();
         } else {
              message.error(res.msg);
         }
@@ -469,15 +540,16 @@ const handleDelete = (id: number) => {
      request.delete("/dict/" + id).then((res: any) => {
         if(res.code === 200) {
             message.success("删除成功");
-            loadDictData();
+            loadData();
         } else {
             message.error(res.msg);
         }
     });
 };
 
-onMounted(() => {
+onMounted(async () => {
     loadMenuConfig();
+    await ensureConfig();
     loadTypes();
 });
 </script>
@@ -485,10 +557,20 @@ onMounted(() => {
 <style scoped>
  /* Only page specific styles left, common animations moved to BatchDeleteButton but keeping slide-fade for left menu items checkboxes */
 
+ .left-pane-card {
+     height: 600px;
+     display: flex;
+     flex-direction: column;
+     overflow: hidden;
+     padding-right: 15px;
+ }
+
  .pane-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; height: 32px;}
- .title { font-weight: bold; font-size: 16px; color: #444; }
+ .title { font-weight: 600; font-size: 16px; color: #111111; }
  .header-actions { display: flex; align-items: center; justify-content: flex-end; }
- .form-label { color: #867E7E; }
+ .form-label { color: #5f6368; }
+ .dict-filter-row { padding-top: 0; }
+ .dict-toolbar { margin-bottom: 20px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
  
  .search-wrap { margin-bottom: 15px; }
 
@@ -498,16 +580,16 @@ onMounted(() => {
      display: flex; 
      align-items: center; 
      padding: 10px 12px; 
-     border-radius: 12px; 
+     border-radius: var(--mono-radius-sm); 
      cursor: pointer; 
      transition: all 0.2s;
      margin-bottom: 4px;
  }
- .type-item:hover { background-color: #f5f5f5; }
- .type-item.active { background-color: #faf7f0; color: #f7b500; font-weight: 500; }
- .type-item.light-yellow-bg { background-color: #fffbe6; }
+ .type-item:hover { background-color: #f7f7f5; }
+ .type-item.active { background-color: #f0f0ee; color: #111111; font-weight: 600; }
+ .type-item.light-yellow-bg { background-color: #f7f7f5; }
  .type-item .type-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
- .empty-text { color: #999; text-align: center; margin-top: 20px; }
+ .empty-text { color: #8a8f98; text-align: center; margin-top: 20px; }
  .pagination-footer { padding-top: 15px; display: flex; justify-content: center; /* Removed border-top */ }
 
  /* Fade and Slide Transitions */
@@ -517,26 +599,6 @@ onMounted(() => {
  .fade-enter-from, .fade-leave-to { opacity: 0; }
  
  .checkbox-wrapper { margin-right: 8px; display: flex; align-items: center; }
-
-
- :deep(.ant-input-number-input) { height: 40px; }
- 
- /* Fix Vertical Alignment for Form Items */
- :deep(.ant-form-item .ant-row) {
-     align-items: center;
- }
- :deep(.ant-form-item-control-input) {
-     min-height: 40px;
- }
- /* Modal Button & Title Adjustments */
- :deep(.ant-modal-close) {
-     top: 5px !important;
-     right: 5px !important;
- }
- :deep(.ant-modal-header) {
-     padding: 10px 20px !important;
- }
-
  /* ===== DARK MODE ===== */
  :global(.dark) .title {
      color: #ffffffd9;
@@ -547,12 +609,12 @@ onMounted(() => {
  }
 
  :global(.dark) .type-item.active {
-     background-color: rgba(247, 181, 0, 0.12);
-     color: #f7b500;
+     background-color: rgba(255, 255, 255, 0.12);
+     color: #ffffffd9;
  }
 
  :global(.dark) .type-item.light-yellow-bg {
-     background-color: rgba(247, 181, 0, 0.08);
+     background-color: rgba(255, 255, 255, 0.08);
  }
 
  :global(.dark) .empty-text {
@@ -571,31 +633,15 @@ onMounted(() => {
 </style>
 
 <style>
-/* Global styles for Modal to achieve Glass Effect */
-.glass-modal .ant-modal-content {
-    background-color: rgba(255, 255, 255, 0.7) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    border-radius: 16px;
-}
-.glass-modal .ant-modal-header {
-    background: transparent !important;
-    border-bottom: none !important;
-}
-
-/* Local Overrides for DictList */
 :global(.search-icon) { color: rgba(0,0,0,0.25); }
 :global(.dark) :global(.search-icon) { color: rgba(255,255,255,0.45); }
 
 /* Force input transparency in dark mode for this component */
-:global(.dark) .search-wrap .ant-input-affix-wrapper,
-:global(.dark) .search-wrap .standard-input-wrapper .ant-input-affix-wrapper {
+:global(.dark) .search-wrap .standard-input-wrapper .std-input {
     background-color: transparent !important;
     border-color: rgba(255,255,255,0.1) !important;
 }
-:global(.dark) .search-wrap input.ant-input {
+:global(.dark) .search-wrap .standard-input-wrapper .std-input-control {
     background-color: transparent !important; 
 }
 </style>
