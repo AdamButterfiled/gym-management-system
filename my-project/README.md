@@ -10,8 +10,24 @@
 - Vue Router
 - Vuex
 - Ant Design Vue
+- shadcn-vue
+- Reka UI
+- Tailwind CSS 4
 - ECharts / Unovis
 - Axios
+
+说明：
+
+- 当前后台是 `Ant Design Vue` 页面能力与 `shadcn-vue + Reka UI + Tailwind CSS 4` 组件体系混合使用。
+- 项目根目录下的 `components.json` 已配置为 `shadcn-vue` 结构。
+
+## 界面参考
+
+![登录页参考](../docs/readme-assets/reference-03-login.jpg)
+
+![工作台参考](../docs/readme-assets/reference-01-dashboard.png)
+
+![菜单权限管理参考](../docs/readme-assets/reference-02-permissions.jpg)
 
 ## 安装依赖
 
