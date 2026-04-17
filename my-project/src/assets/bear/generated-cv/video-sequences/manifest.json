@@ -4,7 +4,7 @@
     "height": 592
   },
   "reference": {
-    "svg": "/Users/adambutterfield/vue-project/my-project/src/assets/bear/generated-cv/transparent-svg/idle-open.svg",
+    "svg": "src/assets/bear/generated-cv/transparent-svg/idle-open.svg",
     "centerX": 267.5,
     "bottom": 526.0,
     "proxyHeight": 355.0

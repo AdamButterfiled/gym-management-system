@@ -1,18 +1,16 @@
 package com.gym.service.impl;
 
-import cn.hutool.crypto.digest.BCrypt;
-import cn.hutool.jwt.JWTUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gym.entity.User;
 import com.gym.mapper.UserMapper;
 import com.gym.service.UserService;
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import com.gym.utils.JwtUtils;
 
 import java.util.HashMap;
@@ -32,8 +30,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public User login(String username, String password) {
-        System.out.println("====== [DEBUG] 开始处理登录请求: " + username + " ======");
-
         // 1. 创建认证令牌
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username,
                 password);
@@ -41,7 +37,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             // 2. 调用 Spring Security 进行认证
             // 这一步会自动调用 UserDetailsService.loadUserByUsername 来检查账号密码
             Authentication authenticate = authenticationManager.authenticate(authenticationToken);
-            System.out.println("====== [DEBUG] 认证成功 (密码匹配) ======");
 
             // 3. 如果认证通过 (没抛异常)，从数据库获取完整用户信息
             LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
@@ -58,10 +53,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             String token = jwtUtils.generateToken(user.getUsername(), payload);
             user.setToken(token); // 把 Token 放进用户对象返回给前端
 
-            System.out.println("====== [DEBUG] Token 生成完毕: " + token.substring(0, 10) + "... ======");
             return user;
         } catch (Exception e) {
-            System.out.println("====== [DEBUG] 登录失败: " + e.getMessage() + " ======");
             // 认证失败
             return null;
         }

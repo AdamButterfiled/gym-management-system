@@ -1,8 +1,8 @@
 {
-  "name": "gym-miniapp",
+  "name": "gms-miniapp",
   "private": true,
   "version": "1.0.0",
-  "description": "UniApp client for gym booking v2",
+  "description": "UniApp client for Gym Management System",
   "scripts": {
     "dev:mp-weixin": "echo \"Open this folder with HBuilderX or a UniApp-compatible toolchain.\"",
     "build:mp-weixin": "echo \"Build with HBuilderX or @dcloudio toolchain in a UniApp environment.\""

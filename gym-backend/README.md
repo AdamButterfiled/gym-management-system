@@ -1,2 +1,3 @@
-# gym-smart-ms
-健身房场馆预约系统
+# Gym Management System
+
+Gym Management System (GMS) backend service for venue booking, member operations, coach workflows, and admin management.

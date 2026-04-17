@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.gym</groupId>
-    <artifactId>gym-backend</artifactId>
+    <artifactId>gms-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>gym-backend</name>
-    <description>Gym Venue Reservation System</description>
+    <name>gms-backend</name>
+    <description>Gym Management System backend service</description>
     <properties>
         <java.version>17</java.version>
     </properties>

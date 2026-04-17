@@ -1,7 +1,8 @@
 {
-  "name": "my-project",
+  "name": "gms-admin",
   "version": "0.1.0",
   "private": true,
+  "description": "Admin portal for Gym Management System",
   "scripts": {
     "generate:bear:research": "./.venv-bear/bin/python scripts/generate_bear_research_svgs.py --input-dir \"$HOME/Desktop/polar bears\" --output-dir \"$HOME/Desktop/polar bears\"",
     "generate:bear:intro-video": "./.venv-bear/bin/python scripts/generate_intro_video_svgs.py --video \"$HOME/Desktop/bears/打招呼_3950_0.mp4\" --project-output \"src/assets/bear/generated-cv/intro-video-svg\" --desktop-output \"$HOME/Desktop/bears/generated-cv/intro-video-svg\"",

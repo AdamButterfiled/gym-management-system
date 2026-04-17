@@ -2,14 +2,6 @@
   <slot />
 </template>
 
-<script>
-export default {
-  onLaunch() {
-    console.log('gym-miniapp launched');
-  }
-};
-</script>
-
 <style>
 page {
   background: #f7f2e8;

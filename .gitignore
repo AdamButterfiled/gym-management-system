@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.cv-venv/
 .playwright-cli/
 out/
 output/
@@ -43,3 +44,5 @@ build/
 *.war
 *.nar
 *.ear
+
+my-project/.venv-bear/

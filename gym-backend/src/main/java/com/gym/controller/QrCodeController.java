@@ -39,8 +39,6 @@ public class QrCodeController {
         Map<String, String> map = new HashMap<>();
         map.put("uuid", uuid);
 
-        // 打印调试信息：告诉开发者这个 UUID 有效
-        // System.out.println("[QrCodeController] Generated UUID: " + uuid);
         return Result.success(map);
     }
 

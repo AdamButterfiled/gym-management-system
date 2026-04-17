@@ -4,7 +4,7 @@
       <div class="header-left" :class="{ collapsed }">
         <div class="header-brand">
           <img :src="gmsLogoImg" class="header-brand-logo" :class="{ 'is-dark': isDark }" alt="GMS" />
-          <span v-show="!collapsed" class="header-brand-title">健身房场馆预约系统</span>
+          <span v-show="!collapsed" class="header-brand-title">Gym Management System</span>
         </div>
       </div>
       <div class="header-right">

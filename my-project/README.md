@@ -1,4 +1,6 @@
-# my-project
+# GMS Admin
+
+Gym Management System (GMS) admin portal.
 
 ## Project setup
 ```
