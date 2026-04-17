@@ -2195,7 +2195,7 @@ function clampNumber(value: number, min: number, max: number) {
 .sidebar-subhead span,
 .editor-hint,
 .target-source-text,
-.tree-row-content span,
+.tree-row-content span:not(.tree-row-title),
 .unclassified-row span,
 .field-modal-head span,
 .guard-message {
@@ -2241,30 +2241,30 @@ function clampNumber(value: number, min: number, max: number) {
 
 .tree-row--selectable:hover,
 .unclassified-row:hover {
-  border-color: var(--mono-line-strong);
-  background: var(--mono-surface-soft);
+  border-color: rgba(17, 17, 17, 0.05);
+  background: rgba(17, 17, 17, 0.02);
 }
 
 .tree-row--selected,
 .unclassified-row--selected {
-  border-color: #111111;
-  background: rgba(17, 17, 17, 0.05);
+  border-color: rgba(17, 17, 17, 0.04);
+  background: rgba(17, 17, 17, 0.03);
 }
 
 .tree-row--selectable {
   cursor: pointer;
 }
 
-.tree-menu :deep(.ant-tree-list-holder-inner) {
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-list-holder-inner) {
   align-items: stretch;
 }
 
-.tree-menu :deep(.ant-tree-treenode) {
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-treenode) {
   width: 100%;
   padding: 1px 0;
 }
 
-.tree-menu :deep(.ant-tree-node-content-wrapper) {
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-node-content-wrapper) {
   width: calc(100% - 20px);
   min-height: 40px;
   padding: 0 8px 0 6px;
@@ -2275,30 +2275,34 @@ function clampNumber(value: number, min: number, max: number) {
   transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.tree-menu :deep(.ant-tree-node-content-wrapper:hover) {
-  background: #f8f8f8;
-  color: #111827;
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-node-content-wrapper:hover) {
+  background: rgba(17, 17, 17, 0.02);
+  color: #454c55;
 }
 
-.tree-menu :deep(.ant-tree-node-content-wrapper.ant-tree-node-selected) {
-  background: #f1f3f5 !important;
-  color: #111827 !important;
-  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected) {
+  background: rgba(17, 17, 17, 0.03) !important;
+  color: #3f4752 !important;
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.04);
 }
 
-.tree-menu :deep(.ant-tree-node-content-wrapper.ant-tree-node-selected:hover) {
-  background: #eceff3 !important;
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected:hover) {
+  background: rgba(17, 17, 17, 0.04) !important;
 }
 
-.tree-menu :deep(.ant-tree-node-content-wrapper.ant-tree-node-selected .tree-row-title) {
-  color: #111827;
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected .tree-row-title) {
+  color: #111111;
 }
 
-.tree-menu :deep(.ant-tree-node-content-wrapper.ant-tree-node-selected .tree-row-content span) {
-  color: #4b5563;
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected .tree-row-content span:not(.tree-row-title)) {
+  color: #6a7280;
 }
 
-.tree-menu :deep(.ant-tree-switcher) {
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected .tree-node-icon) {
+  color: #7d8693;
+}
+
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-switcher) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2308,17 +2312,17 @@ function clampNumber(value: number, min: number, max: number) {
   color: #9ca3af;
 }
 
-.tree-menu :deep(.ant-tree-switcher-noop) {
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-switcher-noop) {
   align-items: stretch;
 }
 
-.tree-menu :deep(.ant-tree-indent-unit) {
+.tree-panel :deep(.tree-menu.ant-tree .ant-tree-indent-unit) {
   width: 18px;
 }
 
-.tree-menu :deep(.ant-tree-show-line .ant-tree-indent-unit::before),
-.tree-menu :deep(.ant-tree-show-line .ant-tree-switcher-leaf-line::before),
-.tree-menu :deep(.ant-tree-show-line .ant-tree-switcher-leaf-line::after) {
+.tree-panel :deep(.tree-menu.ant-tree.ant-tree-show-line .ant-tree-indent-unit::before),
+.tree-panel :deep(.tree-menu.ant-tree.ant-tree-show-line .ant-tree-switcher-leaf-line::before),
+.tree-panel :deep(.tree-menu.ant-tree.ant-tree-show-line .ant-tree-switcher-leaf-line::after) {
   border-color: #e5e7eb;
 }
 
@@ -2380,12 +2384,12 @@ function clampNumber(value: number, min: number, max: number) {
   font-size: 13px;
   font-weight: 400;
   line-height: 1.3;
-  color: #1f2937;
+  color: #111111;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.tree-row-content span {
+.tree-row-content span:not(.tree-row-title) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2407,7 +2411,7 @@ function clampNumber(value: number, min: number, max: number) {
   border: 1px solid var(--mono-line-strong);
   border-radius: var(--mono-radius-pill);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.35;
   text-align: center;
   white-space: nowrap;

@@ -3,10 +3,285 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gym Admin</title>
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon.png?v=18" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=18" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=18" />
+    <link rel="shortcut icon" href="/favicon.ico?v=18" />
+    <title>健身房场馆预约系统</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Avenir Next", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: #171717;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body,
+      #app {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      .boot-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(255, 255, 255, 0.9);
+        transition: opacity 0.22s ease, visibility 0.22s ease;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .boot-screen--visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      .boot-card {
+        width: min(100%, 480px);
+        padding: 28px;
+        border: 1px solid rgba(23, 23, 23, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 24px 48px rgba(23, 23, 23, 0.08);
+      }
+
+      .boot-badge {
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 16px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(23, 23, 23, 0.06);
+        color: rgba(23, 23, 23, 0.76);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+
+      .boot-title {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.1;
+        font-weight: 700;
+      }
+
+      .boot-description {
+        margin: 12px 0 0;
+        color: rgba(23, 23, 23, 0.68);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .boot-detail {
+        margin: 16px 0 0;
+        padding: 14px;
+        border-radius: 8px;
+        background: #171717;
+        color: #f7f7f5;
+        font-size: 12px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .boot-detail[hidden] {
+        display: none;
+      }
+
+      .boot-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .boot-actions[hidden] {
+        display: none;
+      }
+
+      .boot-action {
+        min-width: 132px;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #171717;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .boot-action--secondary {
+        background: rgba(23, 23, 23, 0.08);
+        color: #171717;
+      }
+    </style>
   </head>
   <body>
+    <div id="boot-screen" class="boot-screen" role="status" aria-live="polite">
+      <div class="boot-card">
+        <div class="boot-badge">GMS Admin</div>
+        <h1 id="boot-title" class="boot-title">正在启动管理后台</h1>
+        <p id="boot-description" class="boot-description">正在初始化路由和页面资源，请稍候。</p>
+        <pre id="boot-detail" class="boot-detail" hidden></pre>
+        <div id="boot-actions" class="boot-actions" hidden>
+          <button type="button" class="boot-action" onclick="window.__GMS_BOOT__?.retry()">重新加载</button>
+          <button type="button" class="boot-action boot-action--secondary" onclick="window.__GMS_BOOT__?.resetAuth()">清除登录状态</button>
+          <button type="button" class="boot-action boot-action--secondary" onclick="window.__GMS_BOOT__?.resetTheme()">重置界面设置</button>
+        </div>
+      </div>
+    </div>
     <div id="app"></div>
+    <script>
+      (() => {
+        const IGNORABLE_MESSAGES = [
+          'ResizeObserver loop completed with undelivered notifications',
+          'ResizeObserver loop limit exceeded',
+        ];
+        const AUTH_KEYS = ['user', 'isLoggedIn', 'token'];
+        const THEME_KEYS = ['theme-settings'];
+        const bootScreen = document.getElementById('boot-screen');
+        const titleElement = document.getElementById('boot-title');
+        const descriptionElement = document.getElementById('boot-description');
+        const detailElement = document.getElementById('boot-detail');
+        const actionsElement = document.getElementById('boot-actions');
+        let bootReady = false;
+
+        const matchesIgnoredMessage = (value) => {
+          const text = typeof value === 'string'
+            ? value
+            : typeof value?.message === 'string'
+              ? value.message
+              : '';
+          return IGNORABLE_MESSAGES.some((message) => text.startsWith(message));
+        };
+
+        const normalizeDetail = (value) => {
+          if (!value) return '';
+          if (typeof value === 'string') return value;
+          if (typeof value?.stack === 'string' && value.stack.trim()) return value.stack.trim();
+          if (typeof value?.message === 'string') return value.message.trim();
+          try {
+            return JSON.stringify(value, null, 2);
+          } catch {
+            return String(value);
+          }
+        };
+
+        const setErrorState = (title, description, detail) => {
+          if (!bootScreen) return;
+          bootScreen.classList.add('boot-screen--visible');
+          titleElement.textContent = title;
+          descriptionElement.textContent = description;
+
+          if (detail) {
+            detailElement.hidden = false;
+            detailElement.textContent = detail;
+          } else {
+            detailElement.hidden = true;
+            detailElement.textContent = '';
+          }
+
+          actionsElement.hidden = false;
+        };
+
+        const clearStorageKeys = (keys) => {
+          try {
+            keys.forEach((key) => window.localStorage.removeItem(key));
+          } catch {
+            // Ignore storage failures in recovery actions.
+          }
+        };
+
+        window.__GMS_BOOT__ = {
+          ready() {
+            bootReady = true;
+            if (bootScreen) {
+              bootScreen.classList.remove('boot-screen--visible');
+            }
+          },
+          update(message) {
+            if (!bootReady && descriptionElement && typeof message === 'string' && message.trim()) {
+              descriptionElement.textContent = message;
+            }
+          },
+          fail(title, detail, description) {
+            if (matchesIgnoredMessage(detail)) {
+              return;
+            }
+
+            setErrorState(
+              typeof title === 'string' && title.trim() ? title : '页面启动失败',
+              typeof description === 'string' && description.trim()
+                ? description
+                : '页面初始化过程中发生异常，请重试。若仍失败，可先清除登录状态或重置界面设置。',
+              normalizeDetail(detail)
+            );
+          },
+          retry() {
+            window.location.reload();
+          },
+          resetAuth() {
+            clearStorageKeys(AUTH_KEYS);
+            window.location.reload();
+          },
+          resetTheme() {
+            clearStorageKeys(THEME_KEYS);
+            window.location.reload();
+          },
+        };
+
+        window.addEventListener('error', (event) => {
+          const detail = event?.error || event?.message;
+          if (matchesIgnoredMessage(detail)) {
+            return;
+          }
+
+          window.__GMS_BOOT__.fail(
+            '页面启动失败',
+            detail,
+            '页面脚本在初始化阶段发生异常。可以直接重试；如果仍失败，先清除登录状态再重新进入。'
+          );
+        }, true);
+
+        window.addEventListener('unhandledrejection', (event) => {
+          if (matchesIgnoredMessage(event?.reason)) {
+            return;
+          }
+
+          window.__GMS_BOOT__.fail(
+            '页面启动失败',
+            event?.reason,
+            '页面初始化过程中出现未处理的异步异常。可以直接重试；如果仍失败，先清除登录状态再重新进入。'
+          );
+        });
+
+        window.setTimeout(() => {
+          if (!bootReady && !detailElement.textContent) {
+            window.__GMS_BOOT__.fail(
+              '页面启动异常',
+              '页面长时间没有完成初始化。',
+              '只有在页面明显卡住或启动失败时才会看到这里。现在可以重新加载；如果仍失败，再清除登录状态。'
+            );
+          }
+        }, 10000);
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -4,7 +4,7 @@
       <div class="header-left" :class="{ collapsed }">
         <div class="header-brand">
           <img :src="gmsLogoImg" class="header-brand-logo" :class="{ 'is-dark': isDark }" alt="GMS" />
-          <span v-show="!collapsed" class="header-brand-title">Gym Management System</span>
+          <span v-show="!collapsed" class="header-brand-title">健身房场馆预约系统</span>
         </div>
       </div>
       <div class="header-right">
@@ -70,7 +70,7 @@
                   </a-menu-item>
                 </a-sub-menu>
 
-                <a-menu-item v-else :key="child.path">
+                <a-menu-item v-else-if="shouldRenderMenuLink(child)" :key="child.path">
                   <router-link :to="child.path">
                     <component :is="icons[child.icon]" v-if="child.icon && icons[child.icon]" />
                     <FileOutlined v-else />
@@ -96,7 +96,7 @@
                 </a-menu-item>
               </a-sub-menu>
 
-              <a-menu-item v-else-if="item.path !== '/dashboard'" :key="item.path">
+              <a-menu-item v-else-if="shouldRenderMenuLink(item)" :key="item.path">
                 <router-link :to="item.path">
                   <component :is="icons[item.icon]" v-if="item.icon && icons[item.icon]" />
                   <FileOutlined v-else />
@@ -212,8 +212,9 @@ const shellSurfaceVars = computed(() => {
       '--shell-content-bg': 'rgba(24, 24, 24, 0.98)',
       '--shell-menu-text': 'rgba(255,255,255,0.68)',
       '--shell-menu-text-hover': 'rgba(255,255,255,0.92)',
-      '--shell-menu-selected-text': '#ffffff',
-      '--shell-menu-selected-bg': 'rgba(255,255,255,0.08)',
+      '--shell-menu-selected-text': 'rgba(255,255,255,0.92)',
+      '--shell-menu-selected-bg': 'rgba(255,255,255,0.06)',
+      '--shell-menu-selected-border': 'rgba(255,255,255,0.08)',
       '--shell-menu-icon': 'rgba(255,255,255,0.65)',
       '--shell-menu-arrow': 'rgba(255,255,255,0.45)',
     };
@@ -234,8 +235,9 @@ const shellSurfaceVars = computed(() => {
       '--shell-content-bg': 'var(--mono-bg-elevated)',
       '--shell-menu-text': '#666666',
       '--shell-menu-text-hover': '#111111',
-      '--shell-menu-selected-text': '#111111',
-      '--shell-menu-selected-bg': 'rgba(17,17,17,0.06)',
+      '--shell-menu-selected-text': '#3f4752',
+      '--shell-menu-selected-bg': 'rgba(17,17,17,0.03)',
+      '--shell-menu-selected-border': 'rgba(17,17,17,0.04)',
       '--shell-menu-icon': '#777777',
       '--shell-menu-arrow': 'rgba(17,17,17,0.45)',
     };
@@ -256,8 +258,9 @@ const shellSurfaceVars = computed(() => {
       '--shell-content-bg': 'rgba(20, 24, 31, 0.72)',
       '--shell-menu-text': 'rgba(255,255,255,0.66)',
       '--shell-menu-text-hover': 'rgba(255,255,255,0.92)',
-      '--shell-menu-selected-text': '#ffffff',
-      '--shell-menu-selected-bg': 'rgba(255,255,255,0.08)',
+      '--shell-menu-selected-text': 'rgba(255,255,255,0.92)',
+      '--shell-menu-selected-bg': 'rgba(255,255,255,0.06)',
+      '--shell-menu-selected-border': 'rgba(255,255,255,0.08)',
       '--shell-menu-icon': 'rgba(255,255,255,0.6)',
       '--shell-menu-arrow': 'rgba(255,255,255,0.45)',
     };
@@ -275,12 +278,13 @@ const shellSurfaceVars = computed(() => {
     '--shell-trigger-hover-text': '#111111',
     '--shell-brand-text': '#111111',
     '--shell-content-bg': '#ffffff',
-    '--shell-menu-text': '#6b7280',
-    '--shell-menu-text-hover': '#111111',
-    '--shell-menu-selected-text': '#111111',
-    '--shell-menu-selected-bg': 'rgba(17,17,17,0.04)',
-    '--shell-menu-icon': '#9ca3af',
-    '--shell-menu-arrow': 'rgba(17, 17, 17, 0.35)',
+      '--shell-menu-text': '#6b7280',
+      '--shell-menu-text-hover': '#111111',
+      '--shell-menu-selected-text': '#3f4752',
+      '--shell-menu-selected-bg': 'rgba(17,17,17,0.03)',
+      '--shell-menu-selected-border': 'rgba(17,17,17,0.04)',
+      '--shell-menu-icon': '#9ca3af',
+      '--shell-menu-arrow': 'rgba(17, 17, 17, 0.35)',
   };
 });
 const layoutStyle = computed(() => ({
@@ -311,6 +315,21 @@ const siderStyle = computed(() => ({
 }));
 
 const menuTree = computed(() => store.getters.getMenuTree);
+
+const normalizeMenuComponent = (componentPath?: string | null) => String(componentPath || '')
+  .replace(/^\/+/, '')
+  .replace(/\.vue$/i, '')
+  .trim()
+  .toLowerCase();
+
+const isPlaceholderMenu = (item?: { component?: string | null }) => {
+  const normalized = normalizeMenuComponent(item?.component);
+  return !normalized || normalized === 'layout';
+};
+
+const shouldRenderMenuLink = (item?: { path?: string; component?: string | null }) => (
+  Boolean(item?.path) && item?.path !== '/dashboard' && !isPlaceholderMenu(item)
+);
 
 const handleLogout = () => {
   clearAuthStorage();
@@ -389,6 +408,8 @@ onMounted(() => {
 }
 
 .header-brand {
+  --header-brand-logo-height: 22px;
+  --header-brand-axis-offset: 1px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -397,7 +418,8 @@ onMounted(() => {
 }
 
 .header-brand-logo {
-  height: 22px;
+  flex: 0 0 auto;
+  height: var(--header-brand-logo-height);
   width: auto;
   object-fit: contain;
   display: block;
@@ -408,19 +430,25 @@ onMounted(() => {
 }
 
 .header-left.collapsed .header-brand {
+  --header-brand-logo-height: 20px;
   gap: 0;
 }
 
 .header-left.collapsed .header-brand-logo {
-  height: 20px;
+  height: var(--header-brand-logo-height);
 }
 
 .header-brand-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--header-brand-logo-height);
   color: var(--shell-brand-text);
   font-size: 17px;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  transform: translateY(var(--header-brand-axis-offset));
 }
 
 .header-right {
@@ -599,11 +627,18 @@ onMounted(() => {
 :deep(.ant-menu-item-selected a),
 :deep(.ant-menu-item-selected .ant-menu-title-content) {
   color: var(--shell-menu-selected-text) !important;
-  font-weight: 600;
+  font-weight: 400 !important;
 }
 
 :deep(.ant-menu-item-selected) {
   background-color: var(--shell-menu-selected-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--shell-menu-selected-border);
+}
+
+:deep(.ant-menu-item:active),
+:deep(.ant-menu-submenu-title:active) {
+  background-color: var(--shell-menu-selected-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--shell-menu-selected-border);
 }
 
 :deep(.ant-menu-submenu-selected > .ant-menu-submenu-title),

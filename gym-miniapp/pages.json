@@ -15,7 +15,7 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "Gym Management System",
+    "navigationBarTitleText": "健身房场馆预约系统",
     "navigationBarBackgroundColor": "#f7f2e8",
     "backgroundColor": "#f7f2e8"
   }

@@ -7,7 +7,7 @@
             <img class="brand-logo" :src="lightLogo" alt="GMS logo" />
             <div class="brand-copy">
               <span class="brand-kicker">Gym Management System</span>
-              <strong>GMS Admin Portal</strong>
+              <strong>健身房场馆预约系统</strong>
             </div>
           </div>
         </div>

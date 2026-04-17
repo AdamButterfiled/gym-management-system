@@ -245,6 +245,7 @@ export default defineConfig({
     ],
     envPrefix: ['VITE_', 'VUE_APP_'],
     optimizeDeps: {
+        force: true,
         holdUntilCrawlEnd: true,
         include: PREBUNDLED_DEPS,
     },
@@ -260,6 +261,9 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 8080,
         strictPort: true,
+        headers: {
+            'Cache-Control': 'no-store',
+        },
     },
     resolve: {
         alias: {
