@@ -84,7 +84,7 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Upload release
         env:
@@ -95,11 +95,18 @@ jobs:
           set -euo pipefail
           release="${GITHUB_SHA}"
           target="${DEPLOY_USER}@${DEPLOY_HOST}"
-          ssh_args=(-i ~/.ssh/deploy_key -p "$DEPLOY_SSH_PORT" -o StrictHostKeyChecking=yes)
+          ssh_args=(
+            -i ~/.ssh/deploy_key
+            -p "$DEPLOY_SSH_PORT"
+            -o StrictHostKeyChecking=accept-new
+            -o ConnectTimeout=20
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+          )
 
           ssh "${ssh_args[@]}" "$target" "mkdir -p '${DEPLOY_PATH}/releases/${release}'"
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_SSH_PORT} -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_SSH_PORT} -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3" \
             "${APP_DIR}/dist/" \
             "${target}:${DEPLOY_PATH}/releases/${release}/"
           scp "${ssh_args[@]}" deploy/nginx/gms-admin.conf "$target:/tmp/gms-admin.conf"
@@ -109,12 +116,23 @@ jobs:
             install -d '${DEPLOY_PATH}/releases'
             ln -sfn '${DEPLOY_PATH}/releases/${release}' '${DEPLOY_PATH}/current'
             if ! command -v nginx >/dev/null 2>&1; then
-              echo 'nginx is not installed on the deployment server' >&2
-              exit 1
+              if command -v dnf >/dev/null 2>&1; then
+                dnf install -y nginx
+              elif command -v yum >/dev/null 2>&1; then
+                yum install -y nginx
+              else
+                echo 'nginx is not installed and no supported package manager was found' >&2
+                exit 1
+              fi
             fi
             install -m 0644 /tmp/gms-admin.conf /etc/nginx/conf.d/gms-admin.conf
             nginx -t
+            systemctl enable --now nginx
             systemctl reload nginx || systemctl restart nginx
+            if command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+              firewall-cmd --permanent --add-port=7431/tcp
+              firewall-cmd --reload
+            fi
           "
 
       - name: Smoke test
