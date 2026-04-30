@@ -84,7 +84,7 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -T 60 -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Upload release
         env:
@@ -100,23 +100,24 @@ jobs:
             -p "$DEPLOY_SSH_PORT"
             -o BatchMode=yes
             -o StrictHostKeyChecking=accept-new
-            -o ConnectTimeout=20
+            -o ConnectTimeout=90
+            -o ConnectionAttempts=3
             -o ServerAliveInterval=15
             -o ServerAliveCountMax=3
           )
-          rsync_ssh="ssh -i ~/.ssh/deploy_key -p ${DEPLOY_SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"
+          rsync_ssh="ssh -i ~/.ssh/deploy_key -p ${DEPLOY_SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=90 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3"
 
-          timeout 120s ssh "${ssh_args[@]}" "$target" "mkdir -p '${DEPLOY_PATH}/releases/${release}'"
-          timeout 600s rsync -az --delete --timeout=120 \
+          timeout 300s ssh "${ssh_args[@]}" "$target" "mkdir -p '${DEPLOY_PATH}/releases/${release}'"
+          timeout 900s rsync -az --delete --timeout=180 \
             -e "$rsync_ssh" \
             "${APP_DIR}/dist/" \
             "${target}:${DEPLOY_PATH}/releases/${release}/"
-          timeout 120s rsync -az --timeout=60 \
+          timeout 240s rsync -az --timeout=120 \
             -e "$rsync_ssh" \
             deploy/nginx/gms-admin.conf \
             "$target:/tmp/gms-admin.conf"
 
-          timeout 180s ssh "${ssh_args[@]}" "$target" "
+          timeout 300s ssh "${ssh_args[@]}" "$target" "
             set -euo pipefail
             install -d '${DEPLOY_PATH}/releases'
             ln -sfn '${DEPLOY_PATH}/releases/${release}' '${DEPLOY_PATH}/current'
