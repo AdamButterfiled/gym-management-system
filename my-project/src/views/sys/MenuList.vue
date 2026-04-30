@@ -185,6 +185,7 @@
                   <a-checkbox value="ADMIN">管理员</a-checkbox>
                   <a-checkbox value="STAFF">员工</a-checkbox>
                   <a-checkbox value="COACH">教练</a-checkbox>
+                  <a-checkbox value="MEMBER">会员</a-checkbox>
               </a-checkbox-group>
          </a-form-item>
       </a-form>
@@ -242,6 +243,7 @@ interface Menu {
   sort: number;
   roles: string;
   componentStyle?: string | null; // null=inherit, glass, default
+  permissionConfig?: string | null;
   children?: Menu[];
 }
 
@@ -291,7 +293,8 @@ const formState = reactive<Menu>({
     icon: '',
     sort: 0,
     roles: '',
-    componentStyle: null
+    componentStyle: null,
+    permissionConfig: null
 });
 
 const columns = [
@@ -399,6 +402,7 @@ const handleAdd = (parent: Menu | null) => {
     formState.component = '';
     formState.icon = '';
     formState.sort = 0;
+    formState.permissionConfig = null;
     selectedRoles.value = ['ADMIN']; 
     modalVisible.value = true;
 };
@@ -409,9 +413,7 @@ const handleEdit = (record: Menu) => {
     formState.componentStyle = record.componentStyle || null;
     if(formState.parentId === 0) formState.parentId = null;
 
-    let roles = record.roles ? record.roles.split(',') : [];
-    roles = roles.map(r => r === 'MEMBER' ? 'COACH' : r);
-    selectedRoles.value = roles;
+    selectedRoles.value = splitRoles(record.roles);
     modalVisible.value = true;
 };
 

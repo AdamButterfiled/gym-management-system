@@ -1,5 +1,6 @@
 package com.gym.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -50,8 +51,11 @@ public class User implements Serializable {
      */
     private String status;
 
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private String permissionConfig;
+
     private LocalDateTime createdAt;
 
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    @TableField(exist = false)
     private String token;
 }

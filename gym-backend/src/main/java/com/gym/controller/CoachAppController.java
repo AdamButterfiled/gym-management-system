@@ -7,6 +7,7 @@ import com.gym.entity.TrainingLog;
 import com.gym.service.GymV2Service;
 import com.gym.vo.CoachDashboardVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/coach")
 @CrossOrigin
+@PreAuthorize("hasAuthority('COACH')")
 public class CoachAppController {
 
     @Autowired

@@ -73,6 +73,7 @@ public class MenuMigrationRunner implements CommandLineRunner {
         }
 
         ensureFormConfigMenu();
+        ensureRepairMenu();
     }
 
     private void ensureFormConfigMenu() {
@@ -102,5 +103,38 @@ public class MenuMigrationRunner implements CommandLineRunner {
         menu.setComponentStyle("glass");
         menuService.save(menu);
         logger.info("表单管理菜单已创建，父级菜单 ID: {}", parentId);
+    }
+
+    private void ensureRepairMenu() {
+        Menu existing = menuService.getOne(new LambdaQueryWrapper<Menu>()
+            .eq(Menu::getPath, "/repair")
+            .last("limit 1"));
+        if (existing != null) {
+            logger.info("报修工单菜单已存在，跳过创建。");
+            return;
+        }
+
+        Long parentId = resolveParentId("场馆与资源", 999L);
+
+        Menu menu = new Menu();
+        menu.setTitle("报修工单管理");
+        menu.setName("RepairList");
+        menu.setPath("/repair");
+        menu.setComponent("gym/RepairList");
+        menu.setIcon("ToolOutlined");
+        menu.setParentId(parentId);
+        menu.setSort(4);
+        menu.setRoles("ADMIN,STAFF");
+        menu.setHidden(false);
+        menu.setComponentStyle("default");
+        menuService.save(menu);
+        logger.info("报修工单菜单已创建，父级菜单 ID: {}", parentId);
+    }
+
+    private Long resolveParentId(String title, Long fallbackId) {
+        Menu parent = menuService.getOne(new LambdaQueryWrapper<Menu>()
+            .eq(Menu::getTitle, title)
+            .last("limit 1"));
+        return parent != null ? parent.getId() : fallbackId;
     }
 }

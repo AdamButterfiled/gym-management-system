@@ -37,6 +37,7 @@ public class FormConfigQueryServiceImpl implements FormConfigQueryService {
     private final PaymentOrderMapper paymentOrderMapper;
     private final CheckinRecordMapper checkinRecordMapper;
     private final ScheduleConflictMapper scheduleConflictMapper;
+    private final RepairMapper repairMapper;
     private final SysDictMapper sysDictMapper;
     private final MenuMapper menuMapper;
     private final MemberMembershipMapper memberMembershipMapper;
@@ -55,6 +56,7 @@ public class FormConfigQueryServiceImpl implements FormConfigQueryService {
                                       PaymentOrderMapper paymentOrderMapper,
                                       CheckinRecordMapper checkinRecordMapper,
                                       ScheduleConflictMapper scheduleConflictMapper,
+                                      RepairMapper repairMapper,
                                       SysDictMapper sysDictMapper,
                                       MenuMapper menuMapper,
                                       MemberMembershipMapper memberMembershipMapper,
@@ -72,6 +74,7 @@ public class FormConfigQueryServiceImpl implements FormConfigQueryService {
         this.paymentOrderMapper = paymentOrderMapper;
         this.checkinRecordMapper = checkinRecordMapper;
         this.scheduleConflictMapper = scheduleConflictMapper;
+        this.repairMapper = repairMapper;
         this.sysDictMapper = sysDictMapper;
         this.menuMapper = menuMapper;
         this.memberMembershipMapper = memberMembershipMapper;
@@ -168,6 +171,7 @@ public class FormConfigQueryServiceImpl implements FormConfigQueryService {
             case "member-assets" -> queryMemberAssets(request, config);
             case "checkin-record" -> queryCheckins(request, config);
             case "schedule-conflict" -> queryConflicts(request, config);
+            case "repair" -> queryRepairs(request, config);
             case "dict" -> queryDicts(request, config);
             case "menu" -> queryMenus(request, config);
             default -> new Page<>(safePageNum(request), safePageSize(request));
@@ -383,6 +387,24 @@ public class FormConfigQueryServiceImpl implements FormConfigQueryService {
                 "message", "message",
                 "startTime", "start_time",
                 "endTime", "end_time",
+                "createdAt", "created_at"
+            ),
+            wrapper -> wrapper.orderByDesc("created_at")
+        );
+    }
+
+    private Page<Repair> queryRepairs(TableQueryRequest request, FormPageConfig config) {
+        return querySimplePage(
+            repairMapper,
+            request,
+            config,
+            mapOf(
+                "id", "id",
+                "equipmentId", "equipment_id",
+                "venueId", "venue_id",
+                "reporterId", "reporter_id",
+                "description", "description",
+                "status", "status",
                 "createdAt", "created_at"
             ),
             wrapper -> wrapper.orderByDesc("created_at")
@@ -759,6 +781,7 @@ public class FormConfigQueryServiceImpl implements FormConfigQueryService {
             case "/admin/member-assets/page" -> "member-assets";
             case "/admin/checkins/page" -> "checkin-record";
             case "/admin/conflicts/page" -> "schedule-conflict";
+            case "/repair/page" -> "repair";
             case "/dict/list" -> "dict";
             case "/menu/list" -> "menu";
             default -> null;

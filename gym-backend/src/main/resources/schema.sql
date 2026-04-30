@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `sys_user` (
   `balance` DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Account Balance',
   `type` VARCHAR(20) DEFAULT 'REGULAR' COMMENT 'Member Type',
   `status` VARCHAR(20) DEFAULT 'ACTIVE' COMMENT 'User Status',
+  `permission_config` LONGTEXT DEFAULT NULL COMMENT 'Account permission override JSON',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation Time',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`)
@@ -130,6 +131,22 @@ SET @sys_user_email_sql = IF(
 PREPARE sys_user_email_stmt FROM @sys_user_email_sql;
 EXECUTE sys_user_email_stmt;
 DEALLOCATE PREPARE sys_user_email_stmt;
+
+SET @sys_user_permission_config_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'sys_user'
+    AND COLUMN_NAME = 'permission_config'
+);
+SET @sys_user_permission_config_sql = IF(
+  @sys_user_permission_config_exists = 0,
+  'ALTER TABLE `sys_user` ADD COLUMN `permission_config` LONGTEXT DEFAULT NULL COMMENT ''Account permission override JSON''',
+  'SELECT 1'
+);
+PREPARE sys_user_permission_config_stmt FROM @sys_user_permission_config_sql;
+EXECUTE sys_user_permission_config_stmt;
+DEALLOCATE PREPARE sys_user_permission_config_stmt;
 
 CREATE TABLE IF NOT EXISTS `gym_venue` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Venue ID',
@@ -469,10 +486,27 @@ CREATE TABLE IF NOT EXISTS `gym_booking_item` (
   `booking_order_id` BIGINT NOT NULL,
   `slot_id` BIGINT NOT NULL,
   `package_id` BIGINT DEFAULT NULL,
+  `member_package_id` BIGINT DEFAULT NULL,
   `quantity` INT DEFAULT 1,
   `amount` DECIMAL(10,2) DEFAULT 0.00,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Booking line items';
+
+SET @booking_item_member_package_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'gym_booking_item'
+    AND COLUMN_NAME = 'member_package_id'
+);
+SET @booking_item_member_package_sql = IF(
+  @booking_item_member_package_exists = 0,
+  'ALTER TABLE `gym_booking_item` ADD COLUMN `member_package_id` BIGINT DEFAULT NULL AFTER `package_id`',
+  'SELECT 1'
+);
+PREPARE booking_item_member_package_stmt FROM @booking_item_member_package_sql;
+EXECUTE booking_item_member_package_stmt;
+DEALLOCATE PREPARE booking_item_member_package_stmt;
 
 CREATE TABLE IF NOT EXISTS `gym_payment_order` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,

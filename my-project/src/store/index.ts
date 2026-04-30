@@ -6,6 +6,8 @@ export default createStore({
   state: {
     // 侧边栏菜单树 (树形结构)
     menuTree: [],
+    // 当前用户可访问的扁平菜单
+    flatMenus: [],
     // 路由是否已加载
     routesLoaded: false,
     // 当前用户的角色
@@ -13,11 +15,21 @@ export default createStore({
   },
   getters: {
     getMenuTree: (state) => state.menuTree,
+    getFlatMenus: (state) => state.flatMenus,
+    hasMenuAction: (state) => (path: string, action = 'view') => {
+      const normalizedPath = normalizeMenuPath(path)
+      const menu = state.flatMenus.find((item: any) => normalizeMenuPath(item?.path) === normalizedPath)
+      const grantedActions = Array.isArray(menu?.grantedActions) ? menu.grantedActions : []
+      return grantedActions.includes(action)
+    },
     areRoutesLoaded: (state) => state.routesLoaded,
   },
   mutations: {
     SET_MENU_TREE(state, menuTree) {
       state.menuTree = menuTree;
+    },
+    SET_FLAT_MENUS(state, menus) {
+      state.flatMenus = menus;
     },
     SET_ROUTES_LOADED(state, loaded) {
       state.routesLoaded = loaded;
@@ -39,12 +51,13 @@ export default createStore({
 
       try {
         // 调用后端接口获取当前角色可用的菜单列表
-        const res: any = await request.get('/menu/user-menus', { params: { role } });
+        const res: any = await request.get('/menu/user-menus');
         if (res.code === 200) {
           const menuList = res.data;
           // 构建树形结构供侧边栏使用
           const tree = buildTree(menuList);
           commit('SET_MENU_TREE', tree);
+          commit('SET_FLAT_MENUS', menuList);
           return menuList; // 返回扁平列表供路由处理
         }
       } catch (error) {
@@ -90,4 +103,12 @@ function buildTree(list: any[]) {
   cleanChildren(tree);
 
   return tree;
+}
+
+function normalizeMenuPath(path?: string) {
+  if (!path) return ''
+  const normalized = String(path).trim()
+  if (!normalized) return ''
+  if (normalized === '/') return '/'
+  return `/${normalized.replace(/^\/+/, '').replace(/\/+$/, '')}`
 }

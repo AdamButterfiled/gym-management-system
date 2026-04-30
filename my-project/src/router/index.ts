@@ -62,6 +62,12 @@ const coreAppRoutes = [
     meta: { title: '器材管理', style: 'default' }
   },
   {
+    path: 'repair',
+    name: 'RepairList',
+    component: () => import('@/views/gym/RepairList.vue'),
+    meta: { title: '报修工单管理', style: 'default' }
+  },
+  {
     path: 'schedule-conflicts',
     name: 'ConflictList',
     component: () => import('@/views/admin/ConflictList.vue'),
@@ -96,6 +102,12 @@ const coreAppRoutes = [
     name: 'FormConfigList',
     component: () => import('@/views/sys/FormConfigList.vue'),
     meta: { title: '表单管理', style: 'glass' }
+  },
+  {
+    path: 'sys/permissions',
+    name: 'PermissionList',
+    component: () => import('@/views/sys/PermissionList.vue'),
+    meta: { title: '角色权限管理', style: 'glass' }
   }
 ];
 

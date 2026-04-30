@@ -1,16 +1,26 @@
 <template>
-  <WorkspacePage title="报修工单管理">
-    <template #meta>
-      <span class="page-meta">当前为演示数据</span>
-    </template>
-
+  <WorkspacePage title="报修工单管理" variant="menu-list">
     <template #actions>
-      <StandardButton type="search" icon="reload" @click="loadData">刷新记录</StandardButton>
+      <div class="repair-toolbar">
+        <div class="repair-status-filters">
+          <StandardButton
+            v-for="option in statusOptions"
+            :key="option.value || 'ALL'"
+            :type="statusFilter === option.value ? 'primary' : 'default'"
+            size="sm"
+            @click="applyStatusFilter(option.value)"
+          >
+            {{ option.label }}
+          </StandardButton>
+        </div>
+        <StandardButton type="default" icon="reload" :loading="loading" @click="loadData">刷新记录</StandardButton>
+      </div>
     </template>
 
     <section class="workspace-subsection">
       <StandardTable
         :configStyle="currentStyle"
+        surface="menu-list"
         :dataSource="tableData"
         :columns="columns"
         :pagination="pagination"
@@ -18,15 +28,24 @@
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }: { column: any, record: any }">
-            <template v-if="column.key === 'status'">
-                <span :class="['status-pill', repairStatusTone(record.status)]">
-                    {{ repairStatusLabel(record.status) }}
-                </span>
+          <template v-if="column.key === 'status'">
+            <span :class="['status-pill', repairStatusTone(record.status)]">
+              {{ repairStatusLabel(record.status) }}
+            </span>
+          </template>
+          <template v-if="column.key === 'action'">
+            <template v-if="nextRepairAction(record.status)">
+              <StandardButton
+                type="link"
+                size="sm"
+                class="repair-action-btn"
+                @click="handleStatusUpdate(record, nextRepairAction(record.status)?.status || 'FIXED')"
+              >
+                {{ nextRepairAction(record.status)?.label }}
+              </StandardButton>
             </template>
-            <template v-if="column.key === 'action'">
-                <StandardButton v-if="record.status !== 'FIXED'" type="link" size="sm" class="repair-action-btn" @click="handleComplete(record)">完成维修</StandardButton>
-                <span v-else class="repair-complete-text">已完成</span>
-            </template>
+            <span v-else class="repair-complete-text">已完成</span>
+          </template>
         </template>
       </StandardTable>
     </section>
@@ -36,8 +55,8 @@
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
-// import request from '@/request'; // Backend missing for Repair
-import { Repair } from '@/types';
+import request from '@/request';
+import { PageResult, Repair } from '@/types';
 import { fetchRuntimeFormConfig } from '@/api/formConfig';
 import { usePageStyle } from '@/hooks/usePageStyle';
 import type { FormPageConfig } from '@/types/formConfig';
@@ -52,6 +71,14 @@ import WorkspacePage from '@/components/common/WorkspacePage.vue';
 
 const tableData = ref<Repair[]>([]);
 const runtimeConfig = ref<FormPageConfig | null>(null);
+const loading = ref(false);
+const statusFilter = ref('');
+const statusOptions = [
+  { label: '全部工单', value: '' },
+  { label: '待维修', value: 'PENDING' },
+  { label: '维修中', value: 'PROCESSING' },
+  { label: '已维修', value: 'FIXED' },
+];
 
 // Page Style
 const { currentStyle, loadMenuConfig } = usePageStyle();
@@ -59,7 +86,10 @@ const { currentStyle, loadMenuConfig } = usePageStyle();
 const pagination = reactive({
   current: 1,
   pageSize: 10,
-  total: 2,
+  total: 0,
+  showSizeChanger: false,
+  showQuickJumper: false,
+  showTotal: (total: number) => `共 ${Number(total || 0).toLocaleString('zh-CN')} 项`,
 });
 
 const baseColumns = [
@@ -93,26 +123,59 @@ const loadRuntimeConfig = async () => {
   }
 };
 
-// Mock Data for UI Demonstration (Since Backend API is missing)
-const loadData = () => {
-    // request.get("/repair/page"...).then(...)
-    tableData.value = [
-        { id: 1, description: '跑步机显示屏故障', status: 'PENDING', createdAt: '2023-10-20 10:00:00', venueId: 1 },
-        { id: 2, description: '哑铃架松动', status: 'FIXED', createdAt: '2023-10-18 14:30:00', venueId: 1 }
-    ] as any;
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const res = await request.get('/repair/page', {
+      params: {
+        pageNum: pagination.current,
+        pageSize: pagination.pageSize,
+        status: statusFilter.value,
+      },
+    });
+    if (res.code === 200) {
+      const page = res.data as PageResult<Repair>;
+      tableData.value = page.records || [];
+      pagination.total = page.total || 0;
+      return;
+    }
+    message.error(res.msg || '获取工单失败');
+  } finally {
+    loading.value = false;
+  }
 };
 
 const handleTableChange = (pag: any) => {
   pagination.current = pag.current;
   pagination.pageSize = pag.pageSize;
-  // loadData();
+  void loadData();
 };
 
-const handleComplete = (record: Repair) => {
-    record.status = 'FIXED';
-    message.success("维修已完成");
-    // request.post("/repair", record)...
-}
+const applyStatusFilter = (status: string) => {
+  statusFilter.value = status;
+  pagination.current = 1;
+  void loadData();
+};
+
+const nextRepairAction = (status: Repair['status']) => {
+  if (status === 'PENDING') {
+    return { label: '开始处理', status: 'PROCESSING' as Repair['status'] };
+  }
+  if (status === 'PROCESSING') {
+    return { label: '完成维修', status: 'FIXED' as Repair['status'] };
+  }
+  return null;
+};
+
+const handleStatusUpdate = async (record: Repair, status: Repair['status']) => {
+  const res = await request.put(`/repair/${record.id}/status`, { status });
+  if (res.code === 200) {
+    message.success(status === 'PROCESSING' ? '工单已转为维修中' : '维修已完成');
+    await loadData();
+    return;
+  }
+  message.error(res.msg || '更新工单失败');
+};
 
 const repairStatusLabel = (status: string) => {
   if (status === 'FIXED') return '已维修';
@@ -134,11 +197,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
- .repair-action-btn {
-     min-width: 0;
- }
+.repair-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
- .repair-complete-text {
-     color: rgba(100, 116, 139, 0.7);
- }
+.repair-status-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.repair-action-btn {
+  min-width: 0;
+}
+
+.repair-complete-text {
+  color: rgba(100, 116, 139, 0.7);
+}
 </style>

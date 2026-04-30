@@ -39,6 +39,7 @@ const resolveMenuComponent = (componentPath: string) => {
 const resetRouteState = () => {
     store.commit('SET_ROUTES_LOADED', false);
     store.commit('SET_MENU_TREE', []);
+    store.commit('SET_FLAT_MENUS', []);
 };
 
 const hasRegisteredRoute = (path: string, name?: string) => {

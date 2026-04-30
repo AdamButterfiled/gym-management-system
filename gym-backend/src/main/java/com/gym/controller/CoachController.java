@@ -6,6 +6,7 @@ import com.gym.common.Result;
 import com.gym.entity.Coach;
 import com.gym.service.CoachService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController // 标识为返回 JSON 的控制器
 @RequestMapping("/coach") // 基础路由路径
 @CrossOrigin // 允许跨域访问
+@PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
 public class CoachController {
 
     @Autowired

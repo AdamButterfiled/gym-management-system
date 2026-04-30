@@ -40,6 +40,9 @@ public class FormConfigMigrationRunner implements CommandLineRunner {
         if (existing.getFields() == null) {
             existing.setFields(new ArrayList<>());
             changed = true;
+        } else if (!(existing.getFields() instanceof ArrayList)) {
+            existing.setFields(new ArrayList<>(existing.getFields()));
+            changed = true;
         }
 
         Map<String, FormFieldConfig> existingFieldMap = new LinkedHashMap<>();

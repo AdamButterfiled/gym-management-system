@@ -1,10 +1,14 @@
 package com.gym.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 菜单实体类修正版
@@ -27,10 +31,15 @@ public class Menu implements Serializable {
     private Integer sort;
     private String roles;
     private Boolean hidden;
-    @com.baomidou.mybatisplus.annotation.TableField(updateStrategy = com.baomidou.mybatisplus.annotation.FieldStrategy.IGNORED)
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String componentStyle; // 组件样式 (glass, default, null=inherit)
+    @TableField(updateStrategy = FieldStrategy.IGNORED)
+    private String permissionConfig; // 动作权限配置 JSON
 
     // 树形结构必须 (非数据库字段)
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private java.util.List<Menu> children;
+    @TableField(exist = false)
+    private List<Menu> children;
+
+    @TableField(exist = false)
+    private List<String> grantedActions;
 }

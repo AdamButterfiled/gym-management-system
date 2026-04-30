@@ -5,6 +5,7 @@ import com.gym.entity.Menu;
 import java.util.List;
 
 public interface MenuService extends IService<Menu> {
-    // 获取当前用户的所有可用菜单
     List<Menu> getMenusByRole(String role);
+
+    List<Menu> getMenusForCurrentUser();
 }

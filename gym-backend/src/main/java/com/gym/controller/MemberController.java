@@ -12,6 +12,7 @@ import com.gym.vo.BookingCreateResponseVO;
 import com.gym.vo.CheckinTokenVO;
 import com.gym.vo.MemberHomeVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/member")
 @CrossOrigin
+@PreAuthorize("hasAuthority('MEMBER')")
 public class MemberController {
 
     @Autowired

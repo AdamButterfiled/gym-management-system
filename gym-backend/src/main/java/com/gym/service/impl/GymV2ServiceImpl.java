@@ -55,6 +55,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -670,6 +671,7 @@ public class GymV2ServiceImpl implements GymV2Service {
                 item.setBookingOrderId(booking.getId());
                 item.setSlotId(slot.getId());
                 item.setPackageId(memberPackage.getPackageId());
+                item.setMemberPackageId(memberPackage.getId());
                 bookingItemMapper.insert(item);
             }
             case "VENUE" -> {
@@ -684,7 +686,9 @@ public class GymV2ServiceImpl implements GymV2Service {
                 }
 
                 MemberMembership membership = getActiveMembership(user.getId());
-                BigDecimal amount = membership == null ? (venue.getPricePerHour() == null ? BigDecimal.ZERO : venue.getPricePerHour()) : BigDecimal.ZERO;
+                BigDecimal amount = membership == null
+                        ? calculateVenueBookingAmount(venue, request.getStartTime(), request.getEndTime())
+                        : BigDecimal.ZERO;
                 booking.setResourceId(venue.getId());
                 booking.setResourceName(venue.getName());
                 booking.setVenueId(venue.getId());
@@ -950,7 +954,14 @@ public class GymV2ServiceImpl implements GymV2Service {
 
     @Override
     public boolean saveBodyMetric(BodyMetric bodyMetric) {
-        bodyMetric.setCoachId(currentCoach().getId());
+        Coach coach = currentCoach();
+        bodyMetric.setCoachId(coach.getId());
+        if (bodyMetric.getId() != null) {
+            BodyMetric existing = bodyMetricMapper.selectById(bodyMetric.getId());
+            if (existing == null || !Objects.equals(existing.getCoachId(), coach.getId())) {
+                throw new IllegalArgumentException("体测记录不存在");
+            }
+        }
         if (bodyMetric.getMeasuredAt() == null) {
             bodyMetric.setMeasuredAt(LocalDateTime.now());
         }
@@ -978,7 +989,14 @@ public class GymV2ServiceImpl implements GymV2Service {
 
     @Override
     public boolean saveTrainingLog(TrainingLog trainingLog) {
-        trainingLog.setCoachId(currentCoach().getId());
+        Coach coach = currentCoach();
+        trainingLog.setCoachId(coach.getId());
+        if (trainingLog.getId() != null) {
+            TrainingLog existing = trainingLogMapper.selectById(trainingLog.getId());
+            if (existing == null || !Objects.equals(existing.getCoachId(), coach.getId())) {
+                throw new IllegalArgumentException("训练日志不存在");
+            }
+        }
         if (trainingLog.getTrainDate() == null) {
             trainingLog.setTrainDate(LocalDate.now());
         }
@@ -1260,12 +1278,18 @@ public class GymV2ServiceImpl implements GymV2Service {
         }
         if ("PRIVATE_COACH".equals(booking.getResourceType())) {
             privateScheduleMapper.adjustBookedCount(booking.getResourceId(), -1);
-            if (item != null && item.getPackageId() != null) {
-                MemberPrivatePackage memberPackage = memberPrivatePackageMapper.selectOne(new LambdaQueryWrapper<MemberPrivatePackage>()
-                        .eq(MemberPrivatePackage::getPackageId, item.getPackageId())
-                        .eq(MemberPrivatePackage::getUserId, booking.getUserId())
-                        .last("limit 1"));
-                if (memberPackage != null) {
+            if (item != null) {
+                MemberPrivatePackage memberPackage = null;
+                if (item.getMemberPackageId() != null) {
+                    memberPackage = memberPrivatePackageMapper.selectById(item.getMemberPackageId());
+                }
+                if (memberPackage == null && item.getPackageId() != null) {
+                    memberPackage = memberPrivatePackageMapper.selectOne(new LambdaQueryWrapper<MemberPrivatePackage>()
+                            .eq(MemberPrivatePackage::getPackageId, item.getPackageId())
+                            .eq(MemberPrivatePackage::getUserId, booking.getUserId())
+                            .last("limit 1"));
+                }
+                if (memberPackage != null && Objects.equals(memberPackage.getUserId(), booking.getUserId())) {
                     memberPrivatePackageMapper.restoreSession(memberPackage.getId());
                 }
             }
@@ -1323,6 +1347,20 @@ public class GymV2ServiceImpl implements GymV2Service {
             throw new IllegalArgumentException("场馆不存在");
         }
         return venue;
+    }
+
+    private BigDecimal calculateVenueBookingAmount(Venue venue, LocalDateTime startTime, LocalDateTime endTime) {
+        BigDecimal pricePerHour = venue.getPricePerHour() == null ? BigDecimal.ZERO : venue.getPricePerHour();
+        if (pricePerHour.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        long minutes = Duration.between(startTime, endTime).toMinutes();
+        if (minutes <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return pricePerHour
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
     private MemberMembership getActiveMembership(Long userId) {

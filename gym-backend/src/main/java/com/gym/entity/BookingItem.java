@@ -22,6 +22,8 @@ public class BookingItem implements Serializable {
 
     private Long packageId;
 
+    private Long memberPackageId;
+
     private Integer quantity;
 
     private BigDecimal amount;
