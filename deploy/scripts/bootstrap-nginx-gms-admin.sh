@@ -9,6 +9,9 @@ if ! command -v nginx >/dev/null 2>&1; then
     dnf install -y nginx
   elif command -v yum >/dev/null 2>&1; then
     yum install -y nginx
+  elif command -v apt-get >/dev/null 2>&1; then
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nginx
   else
     echo "No supported package manager found for installing nginx" >&2
     exit 1
@@ -40,4 +43,8 @@ systemctl reload nginx || systemctl restart nginx
 if command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
   firewall-cmd --permanent --add-port=7431/tcp
   firewall-cmd --reload
+fi
+
+if command -v ufw >/dev/null 2>&1 && ufw status | grep -q '^Status: active'; then
+  ufw allow 7431/tcp
 fi

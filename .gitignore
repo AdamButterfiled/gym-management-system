@@ -12,6 +12,7 @@ node_modules
 .playwright-cli/
 out/
 output/
+tmp/
 test-results/
 __pycache__/
 *.pyc
