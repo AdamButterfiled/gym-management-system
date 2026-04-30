@@ -103,13 +103,21 @@ jobs:
             -o ServerAliveInterval=15
             -o ServerAliveCountMax=3
           )
+          scp_args=(
+            -i ~/.ssh/deploy_key
+            -P "$DEPLOY_SSH_PORT"
+            -o StrictHostKeyChecking=accept-new
+            -o ConnectTimeout=20
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+          )
 
           ssh "${ssh_args[@]}" "$target" "mkdir -p '${DEPLOY_PATH}/releases/${release}'"
           rsync -az --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_SSH_PORT} -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3" \
             "${APP_DIR}/dist/" \
             "${target}:${DEPLOY_PATH}/releases/${release}/"
-          scp "${ssh_args[@]}" deploy/nginx/gms-admin.conf "$target:/tmp/gms-admin.conf"
+          scp "${scp_args[@]}" deploy/nginx/gms-admin.conf "$target:/tmp/gms-admin.conf"
 
           ssh "${ssh_args[@]}" "$target" "
             set -euo pipefail
