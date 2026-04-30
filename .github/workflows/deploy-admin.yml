@@ -1,0 +1,124 @@
+name: Deploy admin frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-admin-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  APP_DIR: my-project
+  DEPLOY_PATH: /opt/gms-admin
+  APP_PORT: 7431
+
+jobs:
+  verify-backend:
+    name: Verify backend build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Build backend
+        working-directory: gym-backend
+        run: mvn -B -DskipTests package
+
+  build-and-deploy:
+    name: Build and deploy admin frontend
+    runs-on: ubuntu-latest
+    needs: verify-backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-project/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.APP_DIR }}
+        run: npm ci
+
+      - name: Build
+        working-directory: ${{ env.APP_DIR }}
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VITE_API_BASE_URL:-}" ]; then
+            VITE_API_BASE_URL="http://${DEPLOY_HOST}:${APP_PORT}"
+          fi
+          VITE_API_BASE_URL="$VITE_API_BASE_URL" npm run build
+
+      - name: Prepare SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_SSH_PORT"
+          test -n "$DEPLOY_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          release="${GITHUB_SHA}"
+          target="${DEPLOY_USER}@${DEPLOY_HOST}"
+          ssh_args=(-i ~/.ssh/deploy_key -p "$DEPLOY_SSH_PORT" -o StrictHostKeyChecking=yes)
+
+          ssh "${ssh_args[@]}" "$target" "mkdir -p '${DEPLOY_PATH}/releases/${release}'"
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_SSH_PORT} -o StrictHostKeyChecking=yes" \
+            "${APP_DIR}/dist/" \
+            "${target}:${DEPLOY_PATH}/releases/${release}/"
+          scp "${ssh_args[@]}" deploy/nginx/gms-admin.conf "$target:/tmp/gms-admin.conf"
+
+          ssh "${ssh_args[@]}" "$target" "
+            set -euo pipefail
+            install -d '${DEPLOY_PATH}/releases'
+            ln -sfn '${DEPLOY_PATH}/releases/${release}' '${DEPLOY_PATH}/current'
+            if ! command -v nginx >/dev/null 2>&1; then
+              echo 'nginx is not installed on the deployment server' >&2
+              exit 1
+            fi
+            install -m 0644 /tmp/gms-admin.conf /etc/nginx/conf.d/gms-admin.conf
+            nginx -t
+            systemctl reload nginx || systemctl restart nginx
+          "
+
+      - name: Smoke test
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --max-time 20 "http://${DEPLOY_HOST}:${APP_PORT}/" >/dev/null
