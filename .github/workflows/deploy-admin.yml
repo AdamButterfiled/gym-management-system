@@ -66,6 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${VITE_API_BASE_URL:-}" ]; then
+            test -n "$DEPLOY_HOST"
             VITE_API_BASE_URL="http://${DEPLOY_HOST}:${APP_PORT}"
           fi
           VITE_API_BASE_URL="$VITE_API_BASE_URL" npm run build
