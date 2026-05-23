@@ -21,6 +21,30 @@
             <strong class="dashboard-art-number">{{ pill.value }}</strong>
           </div>
         </div>
+
+        <div class="hero-quick-area">
+          <h2 class="hero-quick-title dashboard-art-text">快捷入口</h2>
+          <div class="quick-links hero-quick-links">
+            <StandardButton
+                v-for="link in quickLinks"
+                :key="link.path"
+                type="ghost"
+                :wrap-label="false"
+                class="quick-link hero-quick-link"
+                @click="goTo(link.path)"
+            >
+              <div class="quick-link-icon">
+                <component :is="link.icon"/>
+              </div>
+              <div class="quick-link-copy">
+                <span class="dashboard-art-text">{{ link.title }}</span>
+              </div>
+              <div class="quick-link-arrow">
+                <RightOutlined/>
+              </div>
+            </StandardButton>
+          </div>
+        </div>
       </div>
 
       <div class="hero-side">
@@ -136,49 +160,6 @@
       </div>
     </section>
 
-    <section class="workspace-subsection">
-      <div class="dashboard-bottom-grid">
-        <div class="panel panel--quick">
-          <div class="workspace-subsection-head">
-            <h2 class="workspace-section-title dashboard-art-text">快捷入口</h2>
-          </div>
-
-          <div class="quick-links">
-            <StandardButton
-                v-for="link in quickLinks"
-                :key="link.path"
-                type="ghost"
-                :wrap-label="false"
-                class="quick-link"
-                @click="goTo(link.path)"
-            >
-              <div class="quick-link-icon">
-                <component :is="link.icon"/>
-              </div>
-              <div class="quick-link-copy">
-                <span class="dashboard-art-text">{{ link.title }}</span>
-              </div>
-              <div class="quick-link-arrow">
-                <RightOutlined/>
-              </div>
-            </StandardButton>
-          </div>
-        </div>
-
-        <div class="panel panel--focus">
-          <div class="workspace-subsection-head">
-            <h2 class="workspace-section-title dashboard-art-text">重点数据</h2>
-          </div>
-
-          <div class="focus-metrics">
-            <div v-for="item in spotlightCards" :key="item.label" class="focus-metric-card">
-              <span class="dashboard-art-text">{{ item.label }}</span>
-              <strong class="dashboard-art-number">{{ item.value }}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
   </WorkspacePage>
 </template>
 
@@ -219,11 +200,6 @@ interface QuickLink {
   title: string;
   path: string;
   icon: Component;
-}
-
-interface SpotlightCard {
-  label: string;
-  value: string;
 }
 
 const router = useRouter();
@@ -376,13 +352,6 @@ const quickLinks = computed<QuickLink[]>(() => [
   {title: '经营分析', path: '/analytics', icon: BarChartOutlined},
 ]);
 
-const spotlightCards = computed<SpotlightCard[]>(() => [
-  {label: '近 7 日营收', value: formatMoney(weeklyRevenue.value)},
-  {label: '平均客单价', value: formatMoney(avgOrderValue.value)},
-  {label: '峰值日', value: peakDayLabel.value},
-  {label: '活跃教练', value: formatCount(activeCoachCount.value)}
-]);
-
 const totalTasks = (item: { privateLessons: number; groupLessons: number }) => item.privateLessons + item.groupLessons;
 
 const workloadMax = computed(() => Math.max(...analytics.coachWorkload.map(item => totalTasks(item)), 1));
@@ -518,7 +487,7 @@ onMounted(() => {
   font-size: 30px;
   line-height: 1;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .revenue-brief-sub {
@@ -532,8 +501,8 @@ onMounted(() => {
 .hero-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.9fr);
-  gap: 20px;
-  padding: 24px;
+  gap: 24px;
+  padding: 30px 32px 32px;
   border-radius: var(--mono-radius-xl);
   background: radial-gradient(circle at 92% 8%, rgba(243, 212, 168, 0.14), transparent 22%),
   linear-gradient(135deg, #161310 0%, #2a2119 52%, #6b482c 118%);
@@ -545,26 +514,31 @@ onMounted(() => {
 .hero-main {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
+  min-width: 0;
 }
 
 .hero-title {
   max-width: 720px;
   margin: 0;
-  font-size: 34px;
-  line-height: 1.1;
+  font-size: 32px;
+  line-height: 1.14;
   font-weight: 700;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
 }
 
 .hero-pill-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 
 .hero-pill {
-  padding: 14px 16px;
+  display: flex;
+  min-height: 96px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 18px 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--mono-radius-lg);
   background: rgba(255, 255, 255, 0.08);
@@ -583,12 +557,12 @@ onMounted(() => {
 .hero-pill strong,
 .hero-side-card strong {
   display: block;
-  margin-top: 8px;
+  margin-top: 10px;
   color: #ffffff;
   font-size: 26px;
   line-height: 1;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .hero-side {
@@ -649,7 +623,7 @@ onMounted(() => {
   font-size: 40px;
   line-height: 1;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .health-meter-inner span {
@@ -667,6 +641,19 @@ onMounted(() => {
 
 .hero-panel + .workspace-subsection {
   margin-top: 28px;
+}
+
+.hero-quick-area {
+  margin-top: 4px;
+  padding-top: 2px;
+}
+
+.hero-quick-title {
+  margin: 0 0 14px;
+  color: inherit;
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 650;
 }
 
 .hero-side-card {
@@ -771,8 +758,7 @@ onMounted(() => {
 }
 
 .kpi-title,
-.signal-card span,
-.focus-metric-card span {
+.signal-card span {
   color: #6b7280;
   font-size: 13px;
   line-height: 1.45;
@@ -785,21 +771,16 @@ onMounted(() => {
   font-size: 34px;
   line-height: 1;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
-.dashboard-main-grid,
-.dashboard-bottom-grid {
+.dashboard-main-grid {
   display: grid;
   gap: 20px;
 }
 
 .dashboard-main-grid {
   grid-template-columns: minmax(0, 1fr);
-}
-
-.dashboard-bottom-grid {
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
 }
 
 .dashboard-insights-grid {
@@ -830,15 +811,9 @@ onMounted(() => {
 }
 
 .panel--signals,
-.panel--workload,
-.panel--focus {
+.panel--workload {
   background: radial-gradient(circle at top right, rgba(184, 135, 73, 0.11), transparent 32%),
   rgba(255, 255, 255, 0.82);
-}
-
-.panel--quick {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.86)),
-  radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 38%);
 }
 
 .signal-grid {
@@ -847,23 +822,21 @@ onMounted(() => {
   gap: 14px;
 }
 
-.signal-card,
-.focus-metric-card {
+.signal-card {
   padding: 14px 16px;
   border: 1px solid rgba(17, 17, 17, 0.06);
   border-radius: var(--mono-radius-lg);
   background: rgba(255, 255, 255, 0.62);
 }
 
-.signal-card strong,
-.focus-metric-card strong {
+.signal-card strong {
   display: block;
   margin-top: 8px;
   color: #111111;
   font-size: 28px;
   line-height: 1;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .workload-legend {
@@ -975,6 +948,11 @@ onMounted(() => {
   gap: 14px;
 }
 
+.hero-quick-links {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 18px;
+}
+
 .quick-link {
   display: flex;
   align-items: center;
@@ -1043,10 +1021,44 @@ onMounted(() => {
   backdrop-filter: blur(18px);
 }
 
-.focus-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+.hero-quick-link {
+  min-height: 80px;
+  gap: 16px;
+  padding: 14px 18px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+.hero-quick-link:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+.hero-quick-link .quick-link-icon {
+  width: 46px;
+  height: 46px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  color: inherit;
+}
+
+.hero-quick-link .quick-link-copy span {
+  color: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 520;
+}
+
+.hero-quick-link .quick-link-arrow {
+  width: 32px;
+  height: 32px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  color: currentColor;
+  opacity: 0.72;
 }
 
 @keyframes fade-lift {
@@ -1068,9 +1080,15 @@ onMounted(() => {
 
   .dashboard-insights-grid,
   .dashboard-main-grid,
-  .dashboard-bottom-grid,
   .hero-panel {
     grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 1100px) {
+  .hero-quick-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1083,7 +1101,6 @@ onMounted(() => {
   .header-summary,
   .hero-side-grid,
   .signal-grid,
-  .focus-metrics,
   .quick-links,
   .kpi-grid,
   .hero-pill-row {
@@ -1155,7 +1172,6 @@ html.theme-glass-global:not(.dark) .dashboard-shell .revenue-brief-label,
 html.theme-glass-global:not(.dark) .dashboard-shell .revenue-brief-sub,
 html.theme-glass-global:not(.dark) .dashboard-shell .kpi-title,
 html.theme-glass-global:not(.dark) .dashboard-shell .signal-card span,
-html.theme-glass-global:not(.dark) .dashboard-shell .focus-metric-card span,
 html.theme-glass-global:not(.dark) .dashboard-shell .workload-name-group span,
 html.theme-glass-global:not(.dark) .dashboard-shell .workload-count,
 html.theme-glass-global:not(.dark) .dashboard-shell .workload-legend,
@@ -1174,8 +1190,7 @@ html.theme-glass-global:not(.dark) .dashboard-shell .hero-panel {
 
 html.theme-glass-global:not(.dark) .dashboard-shell .hero-pill,
 html.theme-glass-global:not(.dark) .dashboard-shell .hero-side-card,
-html.theme-glass-global:not(.dark) .dashboard-shell .signal-card,
-html.theme-glass-global:not(.dark) .dashboard-shell .focus-metric-card {
+html.theme-glass-global:not(.dark) .dashboard-shell .signal-card {
   background: var(--mono-surface-bg-elevated, #fff);
   border-color: var(--mono-line);
   box-shadow: none;
@@ -1191,7 +1206,6 @@ html.theme-glass-global:not(.dark) .dashboard-shell .hero-pill strong,
 html.theme-glass-global:not(.dark) .dashboard-shell .hero-side-card strong,
 html.theme-glass-global:not(.dark) .dashboard-shell .health-meter-inner strong,
 html.theme-glass-global:not(.dark) .dashboard-shell .signal-card strong,
-html.theme-glass-global:not(.dark) .dashboard-shell .focus-metric-card strong,
 html.theme-glass-global:not(.dark) .dashboard-shell .workload-name-group strong,
 html.theme-glass-global:not(.dark) .dashboard-shell .quick-link-copy span {
   color: #111111;
@@ -1235,8 +1249,7 @@ html.theme-glass-global:not(.dark) .dashboard-shell .kpi-card::after {
 }
 
 html.theme-glass-global:not(.dark) .dashboard-shell .panel--signals,
-html.theme-glass-global:not(.dark) .dashboard-shell .panel--workload,
-html.theme-glass-global:not(.dark) .dashboard-shell .panel--focus {
+html.theme-glass-global:not(.dark) .dashboard-shell .panel--workload {
   background: #ffffff;
 }
 
@@ -1272,10 +1285,6 @@ html.theme-glass-global:not(.dark) .dashboard-shell .workload-empty {
   background: var(--mono-surface-bg-elevated, #fff);
 }
 
-html.theme-glass-global:not(.dark) .dashboard-shell .panel--quick {
-  background: var(--mono-surface-bg-elevated, #fff);
-}
-
 html.theme-glass-global:not(.dark) .dashboard-shell .quick-link {
   background: var(--mono-surface-bg-elevated, #fff);
   box-shadow: none;
@@ -1304,5 +1313,141 @@ html.theme-glass-global:not(.dark) .dashboard-shell .chart-shell .empty-state {
   background: var(--mono-surface-bg-elevated, #fff);
   box-shadow: none;
   backdrop-filter: none;
+}
+
+html.dark .dashboard-shell,
+html.dark.theme-glass-global .dashboard-shell {
+  border: none;
+  background: #111111 !important;
+  box-shadow: none !important;
+  overflow: visible;
+  color: #ffffff;
+}
+
+html.dark .dashboard-shell::before,
+html.dark.theme-glass-global .dashboard-shell::before {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  background: none;
+}
+
+html.dark .dashboard-shell .revenue-brief {
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: #111111 !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+html.dark .dashboard-shell .hero-panel,
+html.dark .dashboard-shell .kpi-card,
+html.dark .dashboard-shell .panel,
+html.dark .dashboard-shell .panel--signals,
+html.dark .dashboard-shell .panel--workload {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #1f1f1f !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  color: #ffffff !important;
+}
+
+html.dark .dashboard-shell .hero-pill,
+html.dark .dashboard-shell .hero-side-card,
+html.dark .dashboard-shell .signal-card,
+html.dark .dashboard-shell .workload-empty,
+html.dark .dashboard-shell .quick-link,
+html.dark .dashboard-shell .quick-link-icon,
+html.dark .dashboard-shell .quick-link-arrow {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #1f1f1f !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.dark .dashboard-shell .quick-link:hover {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: #2a2a2a !important;
+}
+
+html.dark .dashboard-shell .panel::after,
+html.dark .dashboard-shell .kpi-card::after {
+  display: none;
+}
+
+html.dark .dashboard-shell .revenue-brief-label,
+html.dark .dashboard-shell .revenue-brief-sub,
+html.dark .dashboard-shell .kpi-title,
+html.dark .dashboard-shell .signal-card span,
+html.dark .dashboard-shell .workload-name-group span,
+html.dark .dashboard-shell .workload-count,
+html.dark .dashboard-shell .workload-legend,
+html.dark .dashboard-shell .health-meter-inner small,
+html.dark .dashboard-shell .health-meter-inner span,
+html.dark .dashboard-shell .quick-link-arrow {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .dashboard-shell .revenue-brief-value,
+html.dark .dashboard-shell .revenue-brief-sub span,
+html.dark .dashboard-shell .hero-title,
+html.dark .dashboard-shell .hero-pill strong,
+html.dark .dashboard-shell .hero-side-card strong,
+html.dark .dashboard-shell .health-meter-inner strong,
+html.dark .dashboard-shell .kpi-value,
+html.dark .dashboard-shell .signal-card strong,
+html.dark .dashboard-shell .workload-name-group strong,
+html.dark .dashboard-shell .quick-link-copy span,
+html.dark .dashboard-shell .quick-link-icon {
+  color: var(--mono-text) !important;
+}
+
+html.dark .dashboard-shell .health-meter {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #1f1f1f !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.dark .dashboard-shell .health-meter::before {
+  background: conic-gradient(from 210deg, rgba(255, 255, 255, 0.76) 0 var(--health-progress), rgba(255, 255, 255, 0.08) var(--health-progress) 100%) !important;
+  box-shadow: none;
+}
+
+html.dark .dashboard-shell .health-meter::after {
+  background: #111111 !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+html.dark .dashboard-shell .tone-amber,
+html.dark .dashboard-shell .tone-ink,
+html.dark .dashboard-shell .tone-olive,
+html.dark .dashboard-shell .tone-coral {
+  background: #222222 !important;
+  color: #ffffff !important;
+}
+
+html.dark .dashboard-shell .workload-item {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .dashboard-shell .workload-track {
+  background: #111111 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+html.dark .dashboard-shell .workload-empty {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .dashboard-shell .chart-shell .summary-card,
+html.dark .dashboard-shell .chart-shell .chart-canvas,
+html.dark .dashboard-shell .chart-shell .empty-state {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #1f1f1f !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
 </style>

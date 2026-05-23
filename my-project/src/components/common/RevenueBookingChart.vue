@@ -126,9 +126,9 @@ const buildOption = (): RevenueBookingChartOption => {
   const bookingLineColor = dark ? '#f3d4a8' : '#1f2329';
   const bookingAreaTop = dark ? 'rgba(243, 212, 168, 0.24)' : 'rgba(31, 35, 41, 0.18)';
   const bookingAreaBottom = dark ? 'rgba(243, 212, 168, 0.04)' : 'rgba(31, 35, 41, 0.02)';
-  const markPointBg = dark ? '#f5f5f5' : '#111111';
-  const markPointText = dark ? '#111111' : '#ffffff';
-  const markerBorder = dark ? '#141414' : '#ffffff';
+  const markPointBg = dark ? '#111111' : '#111111';
+  const markPointText = dark ? 'rgba(255, 255, 255, 0.92)' : '#ffffff';
+  const markerBorder = dark ? '#111111' : '#ffffff';
 
   return {
     animationDuration: 700,
@@ -474,19 +474,15 @@ onBeforeUnmount(() => {
 }
 
 html.dark .chart-shell .summary-card {
-  background:
-    linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(18, 18, 18, 0.98)),
-    radial-gradient(circle at top right, rgba(220, 193, 154, 0.18), transparent 52%);
+  background: #1f1f1f;
 }
 
 html.dark .chart-shell .chart-canvas {
-  background:
-    radial-gradient(circle at top left, rgba(220, 193, 154, 0.14), transparent 38%),
-    linear-gradient(180deg, rgba(20, 20, 20, 0.96), rgba(14, 14, 14, 0.98));
+  background: #111111;
 }
 
 html.dark .chart-shell .empty-state {
-  background: rgba(18, 18, 18, 0.72);
+  background: #111111;
 }
 
 @media (max-width: 960px) {

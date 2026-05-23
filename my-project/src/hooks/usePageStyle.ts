@@ -1,79 +1,37 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import request from '@/request';
-
-interface Menu {
-  id: number;
-  parentId?: number | null;
-  path: string;
-  componentStyle?: string | null;
-  children?: Menu[];
-}
+import { useStore } from 'vuex';
+import { normalizeComponentStyle, resolveMenuComponentStyle, type MenuStyleNode, type PageComponentStyle } from '@/utils/menuStyle';
 
 export function usePageStyle() {
   const route = useRoute();
-  const currentStyle = ref<'default' | 'glass'>('default');
+  const store = useStore();
 
-  const checkCurrentPageStyle = (menus: Menu[]) => {
-    const isFlat = menus.length > 0 && !menus[0].children;
+  const resolveCurrentStyle = (): PageComponentStyle => {
+    const flatMenus = (store.getters.getFlatMenus || []) as MenuStyleNode[];
+    const treeMenus = (store.getters.getMenuTree || []) as MenuStyleNode[];
 
-    if (isFlat) {
-      const currentMenu = menus.find((item) => item.path === route.path);
-      if (!currentMenu) {
-        currentStyle.value = 'default';
-        return;
-      }
-
-      if (currentMenu.componentStyle) {
-        currentStyle.value = currentMenu.componentStyle === 'glass' ? 'glass' : 'default';
-        return;
-      }
-
-      let parentId = currentMenu.parentId;
-      while (parentId) {
-        const parent = menus.find((item) => item.id === parentId);
-        if (!parent) {
-          break;
-        }
-
-        if (parent.componentStyle) {
-          currentStyle.value = parent.componentStyle === 'glass' ? 'glass' : 'default';
-          return;
-        }
-
-        parentId = parent.parentId;
-      }
-
-      currentStyle.value = 'default';
-      return;
-    }
-
-    const findStyle = (nodes: Menu[], parentStyle: string | null = null): string | null => {
-      for (const node of nodes) {
-        const effectiveStyle = node.componentStyle || parentStyle;
-        if (node.path === route.path) {
-          return effectiveStyle;
-        }
-        if (node.children) {
-          const childResult = findStyle(node.children, effectiveStyle);
-          if (childResult) {
-            return childResult;
-          }
-        }
-      }
-      return null;
-    };
-
-    const style = findStyle(menus);
-    currentStyle.value = style === 'glass' ? 'glass' : 'default';
+    return resolveMenuComponentStyle(flatMenus, route.path)
+      || resolveMenuComponentStyle(treeMenus, route.path)
+      || normalizeComponentStyle(route.meta.style as string | undefined)
+      || 'default';
   };
 
-  const loadMenuConfig = () => {
-    request.get('/menu/list').then((res: any) => {
-      if (res.code === 200) {
-        checkCurrentPageStyle(res.data);
-      }
-    });
+  const currentStyle = ref<PageComponentStyle>(resolveCurrentStyle());
+  const applyCurrentStyle = () => {
+    currentStyle.value = resolveCurrentStyle();
+  };
+
+  watch(
+    () => [route.path, store.getters.getFlatMenus, store.getters.getMenuTree, route.meta.style],
+    applyCurrentStyle,
+    { immediate: true },
+  );
+
+  const loadMenuConfig = async () => {
+    applyCurrentStyle();
+    await store.dispatch('fetchUserMenus');
+    applyCurrentStyle();
   };
 
   const pageStyleClass = computed(() => ({

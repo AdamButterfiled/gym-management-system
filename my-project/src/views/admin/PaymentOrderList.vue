@@ -31,6 +31,9 @@
           <template v-if="column.key === 'status'">
             <span :class="['status-pill', badgeTone(record.status)]">{{ badgeLabel(record.status) }}</span>
           </template>
+          <template v-if="column.key === 'paidAt'">
+            {{ formatDateTime(record.paidAt) }}
+          </template>
         </template>
       </StandardTable>
     </section>
@@ -48,6 +51,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import dayjs from 'dayjs';
 import { PaymentOrder } from '@/types';
 import { usePageStyle } from '@/hooks/usePageStyle';
 import StandardTable from '@/components/common/StandardTable.vue';
@@ -55,6 +59,7 @@ import WorkspacePage from '@/components/common/WorkspacePage.vue';
 import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
 import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 const { currentStyle, loadMenuConfig } = usePageStyle();
 const {
@@ -83,15 +88,25 @@ const {
 
 const baseColumns = [
   { title: '支付单号', dataIndex: 'paymentNo', key: 'paymentNo', width: 180 },
-  { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 100 },
+  { title: '金额', dataIndex: 'amount', key: 'amount', width: 120 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 140 },
+  { title: '支付时间', dataIndex: 'paidAt', key: 'paidAt', width: 180 },
   { title: '支付类型', dataIndex: 'paymentType', key: 'paymentType', width: 140 },
   { title: '目标类型', dataIndex: 'targetType', key: 'targetType', width: 150 },
   { title: '目标ID', dataIndex: 'targetId', key: 'targetId', width: 100 },
-  { title: '金额', dataIndex: 'amount', key: 'amount', width: 120 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 140 },
-  { title: '支付时间', dataIndex: 'paidAt', key: 'paidAt', width: 180 }
+  { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 100 }
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const paymentColumnPriority = ['paymentNo', 'amount', 'status', 'paidAt', 'paymentType', 'targetType', 'targetId', 'userId'];
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), paymentColumnPriority));
+
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : value.replace('T', ' ');
+};
 
 const badgeLabel = (value: string) => {
   if (value === 'PAID') return '已支付';

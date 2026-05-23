@@ -57,7 +57,7 @@
         :dataSource="assetRows"
         :columns="assetColumns"
         :pagination="pagination"
-        :scroll="{ x: 960 }"
+        :scroll="{ x: 1180 }"
         rowKey="userId"
         @change="handleTableChange"
       >
@@ -75,6 +75,13 @@
           </template>
           <template v-else-if="column.key === 'remainingPrivateSessions'">
             <span class="asset-strong-value">{{ record.remainingPrivateSessions || 0 }} 节</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="asset-row-actions">
+              <StandardButton type="text" size="sm" @click="openBalanceRecharge(record)">充值</StandardButton>
+              <StandardButton type="text" size="sm" @click="openMembershipGrant(record)">开会籍</StandardButton>
+              <StandardButton type="text" size="sm" @click="openPrivateGrant(record)">发课包</StandardButton>
+            </div>
           </template>
         </template>
       </StandardTable>
@@ -227,6 +234,47 @@
       </ConfiguredFormLayout>
     </a-form>
   </StandardModal>
+
+  <StandardModal v-model:visible="balanceVisible" :title="`会员充值 - ${selectedMemberLabel}`" @ok="saveBalanceRecharge">
+    <a-form :model="balanceForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }" class="workspace-modal-form">
+      <a-form-item label="充值金额">
+        <a-input-number v-model:value="balanceForm.amount" :min="1" style="width: 100%" />
+      </a-form-item>
+      <a-form-item label="备注">
+        <a-textarea v-model:value="balanceForm.remark" :rows="3" />
+      </a-form-item>
+    </a-form>
+  </StandardModal>
+
+  <StandardModal v-model:visible="membershipGrantVisible" :title="`开通会籍 - ${selectedMemberLabel}`" @ok="saveMembershipGrant">
+    <a-form :model="membershipGrantForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }" class="workspace-modal-form">
+      <a-form-item label="会籍套餐">
+        <a-select v-model:value="membershipGrantForm.packageId">
+          <a-select-option v-for="item in membershipPackages" :key="item.id" :value="item.id">
+            {{ item.name }} · {{ formatMoney(item.price) }} / {{ item.days }} 天
+          </a-select-option>
+        </a-select>
+      </a-form-item>
+      <a-form-item label="备注">
+        <a-textarea v-model:value="membershipGrantForm.remark" :rows="3" />
+      </a-form-item>
+    </a-form>
+  </StandardModal>
+
+  <StandardModal v-model:visible="privateGrantVisible" :title="`发放课包 - ${selectedMemberLabel}`" @ok="savePrivateGrant">
+    <a-form :model="privateGrantForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }" class="workspace-modal-form">
+      <a-form-item label="私教课包">
+        <a-select v-model:value="privateGrantForm.packageId">
+          <a-select-option v-for="item in privatePackages" :key="item.id" :value="item.id">
+            {{ item.name }} · {{ coachNameMap[item.coachId || 0] || '未绑定' }} · {{ item.totalSessions }} 节
+          </a-select-option>
+        </a-select>
+      </a-form-item>
+      <a-form-item label="备注">
+        <a-textarea v-model:value="privateGrantForm.remark" :rows="3" />
+      </a-form-item>
+    </a-form>
+  </StandardModal>
 </template>
 
 <script setup lang="ts">
@@ -257,6 +305,10 @@ const privatePackages = ref<PrivatePackage[]>([]);
 const coachOptions = ref<CoachProfile[]>([]);
 const membershipVisible = ref(false);
 const privateVisible = ref(false);
+const balanceVisible = ref(false);
+const membershipGrantVisible = ref(false);
+const privateGrantVisible = ref(false);
+const selectedMember = ref<MemberAssetRow | null>(null);
 const {
   filterableFields,
   quickSearchEnabled,
@@ -298,12 +350,32 @@ const privateForm = reactive<PrivatePackage>({
   description: ''
 });
 
+const balanceForm = reactive({
+  amount: 100,
+  remark: ''
+});
+
+const membershipGrantForm = reactive({
+  packageId: undefined as number | undefined,
+  remark: ''
+});
+
+const privateGrantForm = reactive({
+  packageId: undefined as number | undefined,
+  remark: ''
+});
+
 const coachNameMap = computed<Record<number, string>>(() => {
   const map: Record<number, string> = {};
   coachOptions.value.forEach(item => {
     if (item.id) map[item.id] = item.name;
   });
   return map;
+});
+
+const selectedMemberLabel = computed(() => {
+  if (!selectedMember.value) return '未选择会员';
+  return selectedMember.value.realName || selectedMember.value.username;
 });
 
 const totalBalance = computed(() =>
@@ -374,7 +446,8 @@ const baseAssetColumns = [
   { title: '钱包余额', dataIndex: 'balance', key: 'balance', width: 120 },
   { title: '当前会籍', dataIndex: 'membership', key: 'membership', width: 140 },
   { title: '会籍到期', dataIndex: 'membershipEndDate', key: 'membershipEndDate', width: 140 },
-  { title: '剩余私教课时', dataIndex: 'remainingPrivateSessions', key: 'remainingPrivateSessions', width: 140 }
+  { title: '剩余私教课时', dataIndex: 'remainingPrivateSessions', key: 'remainingPrivateSessions', width: 140 },
+  { title: '操作', key: 'actions', width: 220, fixed: 'right' }
 ];
 const assetColumns = computed(() => buildColumns(baseAssetColumns));
 const membershipTableFields = computed(() => getTargetFields('membership-table'));
@@ -421,6 +494,34 @@ const loadPackages = async () => {
   if (coachRes.code === 200) coachOptions.value = (coachRes.data as PageResult<CoachProfile>).records;
 };
 
+const openBalanceRecharge = (record: MemberAssetRow) => {
+  selectedMember.value = record;
+  Object.assign(balanceForm, { amount: 100, remark: '' });
+  balanceVisible.value = true;
+};
+
+const openMembershipGrant = (record: MemberAssetRow) => {
+  selectedMember.value = record;
+  Object.assign(membershipGrantForm, {
+    packageId: membershipPackages.value[0]?.id,
+    remark: ''
+  });
+  membershipGrantVisible.value = true;
+};
+
+const openPrivateGrant = (record: MemberAssetRow) => {
+  selectedMember.value = record;
+  Object.assign(privateGrantForm, {
+    packageId: privatePackages.value[0]?.id,
+    remark: ''
+  });
+  privateGrantVisible.value = true;
+};
+
+const showBusinessError = (res: any, fallback: string) => {
+  message.error(res?.msg || fallback);
+};
+
 const saveMembershipPackage = async () => {
   const res = (await request.post('/admin/membership-packages', membershipForm)) as any;
   if (res.code === 200) {
@@ -428,6 +529,8 @@ const saveMembershipPackage = async () => {
     membershipVisible.value = false;
     Object.assign(membershipForm, { name: '', price: 199, days: 30, dailyLimit: 1, description: '' });
     loadPackages();
+  } else {
+    showBusinessError(res, '会籍套餐保存失败');
   }
 };
 
@@ -438,6 +541,68 @@ const savePrivatePackage = async () => {
     privateVisible.value = false;
     Object.assign(privateForm, { coachId: undefined, name: '', price: 999, totalSessions: 5, description: '' });
     loadPackages();
+  } else {
+    showBusinessError(res, '私教课包保存失败');
+  }
+};
+
+const saveBalanceRecharge = async () => {
+  if (!selectedMember.value) return;
+  if (!balanceForm.amount || Number(balanceForm.amount) <= 0) {
+    message.warning('请输入有效充值金额');
+    return;
+  }
+
+  const res = (await request.post(
+    `/admin/member-assets/${selectedMember.value.userId}/balance-recharge`,
+    balanceForm
+  )) as any;
+  if (res.code === 200) {
+    message.success('余额已充值');
+    balanceVisible.value = false;
+    await loadData();
+  } else {
+    showBusinessError(res, '余额充值失败');
+  }
+};
+
+const saveMembershipGrant = async () => {
+  if (!selectedMember.value) return;
+  if (!membershipGrantForm.packageId) {
+    message.warning('请选择会籍套餐');
+    return;
+  }
+
+  const res = (await request.post(
+    `/admin/member-assets/${selectedMember.value.userId}/membership`,
+    membershipGrantForm
+  )) as any;
+  if (res.code === 200) {
+    message.success('会籍已开通');
+    membershipGrantVisible.value = false;
+    await loadData();
+  } else {
+    showBusinessError(res, '会籍开通失败');
+  }
+};
+
+const savePrivateGrant = async () => {
+  if (!selectedMember.value) return;
+  if (!privateGrantForm.packageId) {
+    message.warning('请选择私教课包');
+    return;
+  }
+
+  const res = (await request.post(
+    `/admin/member-assets/${selectedMember.value.userId}/private-package`,
+    privateGrantForm
+  )) as any;
+  if (res.code === 200) {
+    message.success('私教课包已发放');
+    privateGrantVisible.value = false;
+    await loadData();
+  } else {
+    showBusinessError(res, '私教课包发放失败');
   }
 };
 
@@ -494,17 +659,15 @@ html.theme-glass-global:not(.dark) .member-assets-page {
 html.dark .member-assets-page {
   --asset-line: rgba(255, 255, 255, 0.08);
   --asset-line-strong: rgba(255, 255, 255, 0.16);
-  --asset-paper: rgba(22, 22, 22, 0.96);
-  --asset-paper-soft: rgba(16, 16, 16, 0.94);
+  --asset-paper: #1f1f1f;
+  --asset-paper-soft: #181818;
   --asset-shadow: 0 22px 48px rgba(0, 0, 0, 0.32);
-  --asset-indicator-bg: linear-gradient(180deg, rgba(24, 24, 24, 0.96), rgba(18, 18, 18, 0.92));
-  --asset-stage-bg:
-    linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(14, 14, 14, 0.94)),
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.06), transparent 32%);
+  --asset-indicator-bg: #1f1f1f;
+  --asset-stage-bg: #111111;
   --asset-tag-bg: rgba(255, 255, 255, 0.08);
   --asset-tag-text: rgba(255, 255, 255, 0.72);
   --asset-strip-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.04), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.06));
-  --asset-catalog-bg: linear-gradient(180deg, rgba(22, 22, 22, 0.96), rgba(16, 16, 16, 0.94));
+  --asset-catalog-bg: #1f1f1f;
   --asset-catalog-accent: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 22%);
   --asset-chip-border: rgba(255, 255, 255, 0.08);
   --asset-chip-active-bg: rgba(255, 255, 255, 0.12);
@@ -678,6 +841,13 @@ html.theme-glass-global:not(.dark) .member-assets-page .asset-panel-tag {
 .asset-strong-value {
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+.asset-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .asset-chip {

@@ -1,21 +1,24 @@
 <template>
   <a-modal
     :open="visible"
-    title="高级筛选"
     width="920px"
     class="advanced-filter-modal"
+    wrapClassName="advanced-filter-modal"
     :mask="false"
     :destroyOnClose="false"
     @cancel="handleCancel"
     @ok="handleApply"
   >
-    <div class="advanced-filter-shell">
-      <div class="advanced-filter-head">
+    <template #title>
+      <div class="advanced-filter-title-row">
+        <span class="advanced-filter-title-text">高级筛选</span>
         <StandardButton type="text" icon="reload" class="head-reset" @click="handleClear">
           清空规则
         </StandardButton>
       </div>
+    </template>
 
+    <div class="advanced-filter-shell">
       <div class="rule-list">
         <template v-for="(rule, index) in localRules" :key="rule.id">
           <div v-if="index > 0" class="rule-connector" :aria-label="`当前使用 ${logicLabels[localLogic]} 连接`">
@@ -35,6 +38,7 @@
               placeholder="搜索选择字段"
               :options="fieldOptions"
               option-filter-prop="label"
+              popup-class-name="advanced-filter-dropdown"
               :getPopupContainer="resolvePopupContainer"
               @change="handleFieldChange(rule.id, $event as string)"
             />
@@ -46,6 +50,7 @@
               :menuItemSelectedIcon="renderSelectedItemIcon"
               placeholder="选择操作"
               :options="operatorOptionsForField(resolveField(rule))"
+              popup-class-name="advanced-filter-dropdown"
               :getPopupContainer="resolvePopupContainer"
               @change="handleOperatorChange(rule.id, $event as string)"
             />
@@ -439,6 +444,7 @@ function resolveValueProps(rule: FormFilterRule) {
           filterOption: (input: string, option: { label?: string; value?: string | number | boolean }) =>
             String(option?.label ?? option?.value ?? '').toLowerCase().includes(input.trim().toLowerCase()),
           allowClear: true,
+          popupClassName: 'advanced-filter-dropdown',
           getPopupContainer: resolvePopupContainer,
         };
       }
@@ -459,6 +465,7 @@ function resolveValueProps(rule: FormFilterRule) {
         options: fieldOptionsCache[field.fieldKey] || [],
         loading: loadingKeys[field.fieldKey],
         allowClear: true,
+        popupClassName: 'advanced-filter-dropdown',
         getPopupContainer: resolvePopupContainer,
       };
     case 'date':
@@ -467,6 +474,7 @@ function resolveValueProps(rule: FormFilterRule) {
         value: toDayjs(rule.value),
         style: 'width: 100%',
         valueFormat: undefined,
+        popupClassName: 'advanced-filter-picker-dropdown',
         getPopupContainer: resolvePopupContainer,
       };
     case 'date-range':
@@ -474,6 +482,7 @@ function resolveValueProps(rule: FormFilterRule) {
         ...common,
         value: toDayjsRange(rule.value, rule.valueTo),
         style: 'width: 100%',
+        popupClassName: 'advanced-filter-picker-dropdown',
         getPopupContainer: resolvePopupContainer,
       };
     case 'number':
@@ -604,18 +613,28 @@ onBeforeUnmount(() => {
   gap: 18px;
 }
 
-.advanced-filter-head {
+.advanced-filter-title-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-bottom: 2px;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding-right: 64px;
+}
+
+.advanced-filter-title-text {
+  color: var(--mono-text);
+  font-size: 18px;
+  font-weight: 400 !important;
+  line-height: 1.35;
+  letter-spacing: 0;
 }
 
 .head-reset {
   min-width: 0 !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border-radius: var(--mono-radius-pill) !important;
 }
 
 .rule-list {
@@ -655,11 +674,11 @@ onBeforeUnmount(() => {
 
 .rule-row {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1.08fr) minmax(0, 0.88fr) minmax(0, 1fr) 56px;
+  grid-template-columns: 56px minmax(180px, 1fr) minmax(150px, 0.82fr) minmax(230px, 1.08fr) 48px;
   gap: 14px;
   align-items: center;
   padding: 14px 16px;
-  border: 1px solid var(--mono-line);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: var(--mono-radius-md);
   background: #ffffff;
 }
@@ -668,10 +687,12 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  justify-self: center;
+  width: 48px;
+  min-width: 48px;
   height: 48px;
   border: 1px solid var(--mono-line);
-  border-radius: var(--mono-radius-sm);
+  border-radius: var(--mono-radius-pill);
   background: var(--mono-surface-subtle);
   color: var(--mono-text-secondary);
   font-size: 12px;
@@ -686,17 +707,22 @@ onBeforeUnmount(() => {
 .rule-value {
   min-width: 0;
   display: flex;
+  overflow: hidden;
 }
 
 .rule-value :deep(.workspace-filter-control) {
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .rule-delete-button {
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  border-radius: var(--page-controlled-input-radius, var(--mono-radius-pill)) !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 48px;
 }
 
 .append-bar {
@@ -881,15 +907,23 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-:deep(.range-number-input) {
+.range-number-input {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 10px;
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
   align-items: center;
 }
 
 :deep(.range-number-field.ant-input-number) {
   width: 100%;
+  min-width: 0;
+}
+
+:deep(.range-number-field .ant-input-number-input) {
+  min-width: 0;
 }
 
 :deep(.range-separator) {
@@ -906,17 +940,19 @@ onBeforeUnmount(() => {
 }
 
 :deep(.advanced-filter-modal .ant-modal-header) {
+  padding-top: 14px;
   padding-bottom: 0;
   background: #ffffff;
 }
 
 :deep(.advanced-filter-modal .ant-modal-title) {
-  font-size: 22px;
-  font-weight: 700;
+  width: 100%;
+  font-size: 18px;
+  font-weight: 400 !important;
 }
 
 :deep(.advanced-filter-modal .ant-modal-body) {
-  padding-top: 16px;
+  padding-top: 20px;
   padding-bottom: 20px;
 }
 
@@ -1032,6 +1068,11 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 900px) {
+  .advanced-filter-title-row {
+    gap: 16px;
+    padding-right: 52px;
+  }
+
   .rule-row {
     grid-template-columns: 1fr;
   }
@@ -1052,5 +1093,318 @@ onBeforeUnmount(() => {
     width: auto;
     max-width: 100%;
   }
+}
+</style>
+
+<style>
+.advanced-filter-modal {
+  --advanced-filter-control-height: 46px;
+  --advanced-filter-control-radius: 23px;
+  --advanced-filter-control-border: rgba(15, 23, 42, 0.16);
+  --advanced-filter-control-border-hover: rgba(15, 23, 42, 0.24);
+  --advanced-filter-control-border-focus: rgba(15, 23, 42, 0.34);
+  --advanced-filter-control-bg: #ffffff;
+  --advanced-filter-control-bg-disabled: #fafafa;
+  --advanced-filter-control-text: #111827;
+  --advanced-filter-control-muted: #8d96a3;
+}
+
+.advanced-filter-modal .ant-modal-close {
+  top: 24px;
+  right: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+}
+
+.advanced-filter-modal .ant-modal-header {
+  padding: 14px 18px 0;
+  background: #ffffff;
+}
+
+.advanced-filter-modal .ant-modal-title {
+  width: 100%;
+  font-size: 18px;
+  font-weight: 400 !important;
+  line-height: 1.35;
+}
+
+.advanced-filter-modal .ant-modal-body {
+  padding-top: 20px;
+}
+
+.advanced-filter-modal .workspace-filter-control,
+.advanced-filter-modal .workspace-filter-control.ant-select,
+.advanced-filter-modal .workspace-filter-control.ant-picker,
+.advanced-filter-modal .workspace-filter-control.ant-input,
+.advanced-filter-modal .workspace-filter-control.ant-input-number,
+.advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper,
+.advanced-filter-modal .workspace-filter-control.ant-auto-complete {
+  width: 100%;
+  min-width: 0;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select .ant-select-selector,
+.advanced-filter-modal .workspace-filter-control.ant-picker,
+.advanced-filter-modal .workspace-filter-control.ant-input,
+.advanced-filter-modal .workspace-filter-control.ant-input-number,
+.advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper {
+  height: var(--advanced-filter-control-height) !important;
+  min-height: var(--advanced-filter-control-height) !important;
+  border: 1px solid var(--advanced-filter-control-border) !important;
+  border-radius: var(--advanced-filter-control-radius) !important;
+  background: var(--advanced-filter-control-bg) !important;
+  color: var(--advanced-filter-control-text) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select .ant-select-selector {
+  display: flex;
+  align-items: center;
+  padding: 0 16px !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-input {
+  padding: 0 16px !important;
+  line-height: calc(var(--advanced-filter-control-height) - 2px) !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-picker {
+  padding: 0 16px !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-input-number .ant-input-number-input {
+  height: calc(var(--advanced-filter-control-height) - 2px) !important;
+  padding: 0 16px !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select-single .ant-select-selector .ant-select-selection-search-input {
+  height: calc(var(--advanced-filter-control-height) - 2px) !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select-single .ant-select-selector .ant-select-selection-item,
+.advanced-filter-modal .workspace-filter-control.ant-select-single .ant-select-selector .ant-select-selection-placeholder {
+  line-height: calc(var(--advanced-filter-control-height) - 2px) !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select .ant-select-selection-placeholder,
+.advanced-filter-modal .workspace-filter-control.ant-input::placeholder,
+.advanced-filter-modal .workspace-filter-control.ant-input-number .ant-input-number-input::placeholder {
+  color: var(--advanced-filter-control-muted) !important;
+  font-weight: 500;
+  opacity: 1;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select:hover .ant-select-selector,
+.advanced-filter-modal .workspace-filter-control.ant-picker:hover,
+.advanced-filter-modal .workspace-filter-control.ant-input:hover,
+.advanced-filter-modal .workspace-filter-control.ant-input-number:hover,
+.advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper:hover {
+  border-color: var(--advanced-filter-control-border-hover) !important;
+  background: #ffffff !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select-focused .ant-select-selector,
+.advanced-filter-modal .workspace-filter-control.ant-picker-focused,
+.advanced-filter-modal .workspace-filter-control.ant-input:focus,
+.advanced-filter-modal .workspace-filter-control.ant-input-focused,
+.advanced-filter-modal .workspace-filter-control.ant-input-number-focused,
+.advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper-focused {
+  border-color: var(--advanced-filter-control-border-focus) !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select-disabled .ant-select-selector,
+.advanced-filter-modal .workspace-filter-control.ant-picker-disabled,
+.advanced-filter-modal .workspace-filter-control.ant-input[disabled],
+.advanced-filter-modal .workspace-filter-control.ant-input-number-disabled,
+.advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper-disabled {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: var(--advanced-filter-control-bg-disabled) !important;
+  color: var(--advanced-filter-control-muted) !important;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select-disabled .ant-select-selection-placeholder,
+.advanced-filter-modal .workspace-filter-control.ant-input[disabled]::placeholder {
+  color: var(--advanced-filter-control-muted) !important;
+  opacity: 1;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select-multiple .ant-select-selector {
+  height: auto !important;
+  min-height: var(--advanced-filter-control-height) !important;
+  padding: 6px 12px !important;
+}
+
+.advanced-filter-modal .workspace-filter-control.ant-select-multiple .ant-select-selection-item {
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  border-radius: 999px !important;
+  background: #f6f7f8 !important;
+  color: var(--advanced-filter-control-text) !important;
+  box-shadow: none !important;
+}
+
+.advanced-filter-modal .range-number-input {
+  align-items: center;
+}
+
+.advanced-filter-modal .rule-delete-button {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  border-radius: 50% !important;
+  background: #f8f8f9 !important;
+  color: #9aa3af !important;
+  box-shadow: none !important;
+}
+
+.advanced-filter-modal .rule-delete-button:hover {
+  border-color: rgba(15, 23, 42, 0.18) !important;
+  background: #f2f3f5 !important;
+  color: #667085 !important;
+}
+
+.advanced-filter-modal .rule-delete-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.advanced-filter-dropdown,
+.advanced-filter-picker-dropdown {
+  border: 1px solid rgba(15, 23, 42, 0.14) !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: none !important;
+}
+
+.advanced-filter-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background: #f6f7f8 !important;
+}
+
+.advanced-filter-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: transparent !important;
+  color: var(--advanced-filter-control-text, #111827) !important;
+  font-weight: 400 !important;
+}
+
+.advanced-filter-dropdown .ant-select-item-option-selected .ant-select-item-option-state {
+  color: var(--advanced-filter-control-text, #111827) !important;
+  opacity: 1 !important;
+}
+
+.advanced-filter-dropdown .advanced-filter-selected-icon {
+  width: 11px;
+  height: 11px;
+  color: var(--advanced-filter-control-text, #111827);
+  opacity: 0.9;
+  stroke-width: 2.15;
+}
+
+html.dark .advanced-filter-modal {
+  --advanced-filter-control-border: rgba(255, 255, 255, 0.16);
+  --advanced-filter-control-border-hover: rgba(255, 255, 255, 0.24);
+  --advanced-filter-control-border-focus: rgba(255, 255, 255, 0.34);
+  --advanced-filter-control-bg: #1f1f1f;
+  --advanced-filter-control-bg-disabled: #222222;
+  --advanced-filter-control-text: #ffffff;
+  --advanced-filter-control-muted: rgba(255, 255, 255, 0.78);
+}
+
+html.dark .advanced-filter-modal .ant-modal-content,
+html.dark .advanced-filter-modal .ant-modal-header {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #1f1f1f !important;
+  box-shadow: none !important;
+}
+
+html.dark .advanced-filter-modal .ant-modal-title,
+html.dark .advanced-filter-modal .advanced-filter-title-text {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html.dark .advanced-filter-modal .ant-modal-footer {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .advanced-filter-modal .rule-row,
+html.dark .advanced-filter-modal .rule-index,
+html.dark .advanced-filter-modal .append-trigger,
+html.dark .advanced-filter-modal .rule-delete-button,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-select .ant-select-selector,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-picker,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input-number,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: #1f1f1f !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.dark .advanced-filter-modal .workspace-filter-control.ant-select:hover .ant-select-selector,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-picker:hover,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input:hover,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input-number:hover,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper:hover,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-select-focused .ant-select-selector,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-picker-focused,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input:focus,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input-focused,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input-number-focused,
+html.dark .advanced-filter-modal .workspace-filter-control.ant-input-affix-wrapper-focused {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: #242424 !important;
+  box-shadow: none !important;
+}
+
+html.dark .advanced-filter-modal .workspace-filter-control.ant-select-multiple .ant-select-selection-item {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.dark .advanced-filter-modal .rule-delete-button:hover,
+html.dark .advanced-filter-modal .append-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: #2a2a2a !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.dark .advanced-filter-dropdown,
+html.dark .advanced-filter-picker-dropdown {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: #1f1f1f !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.dark .advanced-filter-dropdown .ant-select-item,
+html.dark .advanced-filter-dropdown .ant-select-item-option-content,
+html.dark .advanced-filter-picker-dropdown .ant-picker-cell {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+html.dark .advanced-filter-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+html.dark .advanced-filter-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html.dark .advanced-filter-dropdown .ant-select-item-option-selected .ant-select-item-option-state,
+html.dark .advanced-filter-dropdown .advanced-filter-selected-icon {
+  color: rgba(255, 255, 255, 0.94) !important;
 }
 </style>

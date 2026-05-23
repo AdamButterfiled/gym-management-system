@@ -37,8 +37,9 @@ export function getQuickSearchConfig(config?: FormPageConfig | null): FormPageQu
   const fields = config?.quickSearch?.fields?.length
     ? [...config.quickSearch.fields]
     : [...(config?.quickSearchFields || [])];
+  const hasSearchSurface = fields.length > 0 || Boolean(config?.quickSearchPlaceholder?.trim());
   return {
-    enabled: config?.quickSearch?.enabled ?? fields.length > 0,
+    enabled: config?.quickSearch?.enabled ?? hasSearchSurface,
     placeholder: config?.quickSearch?.placeholder ?? config?.quickSearchPlaceholder ?? '',
     fields,
     defaultLogic: (config?.quickSearch?.defaultLogic ?? config?.defaultFilterLogic ?? 'AND') as FilterLogic,
@@ -117,7 +118,7 @@ export function normalizeTargets(config: FormPageConfig, manifest?: FormConfigMa
   if (manifestTargets.length) {
     manifestTargets.forEach((manifestTarget, targetIndex) => {
       const saved = targetMap.get(manifestTarget.targetKey);
-      normalized.push(normalizeTarget(saved, manifestTarget, legacyFieldMap, targetIndex));
+      normalized.push(normalizeTarget(saved || null, manifestTarget, legacyFieldMap, targetIndex));
     });
   } else if (savedTargets.length) {
     savedTargets.forEach((target, targetIndex) => {
@@ -276,6 +277,11 @@ function normalizeTarget(
   const manifestFieldMap = new Map((manifestTarget?.fields || []).map((field) => [field.fieldKey, field]));
   const existingFields = Array.isArray(target?.fields) ? target!.fields : [];
   const existingFieldMap = new Map(existingFields.map((field) => [field.fieldKey, field]));
+  const sourceSignature = {
+    ...(manifestTarget?.sourceSignature || {}),
+    ...(target?.sourceSignature || {}),
+  };
+  const preferSourceLayout = shouldPreferManifestFormLayout({ sourceSignature });
   const mergedFields: FormFieldConfig[] = [];
 
   if (manifestTarget?.fields?.length) {
@@ -285,7 +291,8 @@ function normalizeTarget(
           existingFieldMap.get(field.fieldKey) || legacyFieldMap.get(field.fieldKey) || manifestFieldToField(field, targetType),
           targetType,
           fieldIndex,
-          field
+          field,
+          preferSourceLayout
         )
       );
     });
@@ -309,17 +316,14 @@ function normalizeTarget(
     title: target?.title || manifestTarget?.title || targetKey,
     enabled: target?.enabled ?? true,
     order: target?.order ?? manifestTarget?.order ?? targetIndex,
-    sourceSignature: {
-      ...(manifestTarget?.sourceSignature || {}),
-      ...(target?.sourceSignature || {}),
-    },
+    sourceSignature,
     fields: sortTargetFields(mergedFields, targetType),
     runtimeIssues: target?.runtimeIssues || [],
   };
 }
 
 function applySmartFormLayout(target: FormConfigTarget, tableTarget: FormConfigTarget | null): FormConfigTarget {
-  if (target.targetType === 'table' || !shouldUseSmartDefaultLayout(target)) {
+  if (target.targetType === 'table' || shouldKeepDeclaredFormLayout(target) || !shouldUseSmartDefaultLayout(target)) {
     return target;
   }
   const orderedFields = tableTarget ? orderFieldsByTable(target.fields, tableTarget) : sortTargetFields(target.fields, target.targetType);
@@ -327,6 +331,16 @@ function applySmartFormLayout(target: FormConfigTarget, tableTarget: FormConfigT
     ...target,
     fields: buildSmartFormLayout(orderedFields),
   };
+}
+
+function shouldPreferManifestFormLayout(target: Pick<FormConfigTarget, 'sourceSignature'>) {
+  const source = target.sourceSignature?.formLayoutSource;
+  return source === 'native-form' || source === 'row-col-form';
+}
+
+function shouldKeepDeclaredFormLayout(target: Pick<FormConfigTarget, 'sourceSignature'>) {
+  const source = target.sourceSignature?.formLayoutSource;
+  return source === 'configured-layout' || shouldPreferManifestFormLayout(target);
 }
 
 function manifestFieldToField(field: FormConfigManifestTargetField, targetType: FormConfigTargetType): FormFieldConfig {
@@ -360,16 +374,31 @@ function normalizeField(
   field: FormFieldConfig,
   targetType: FormConfigTargetType,
   fieldIndex: number,
-  manifestField?: FormConfigManifestTargetField
+  manifestField?: FormConfigManifestTargetField,
+  preferManifestLayout = false
 ): FormFieldConfig {
   const fieldKey = field.fieldKey || manifestField?.fieldKey || field.queryKey || field.label || `field-${fieldIndex + 1}`;
   const visible = field.visible ?? field.columnVisible ?? true;
   const order = field.order ?? field.columnOrder ?? fieldIndex;
-  const layout = normalizeLayout(field.layout || manifestField?.layout, order, targetType);
+  const layoutSource = preferManifestLayout ? manifestField?.layout || field.layout : field.layout || manifestField?.layout;
+  const layout = normalizeLayout(layoutSource, order, targetType);
+  const preferManifestMeta = Boolean(manifestField && targetType !== 'table');
   const columnWidth = field.columnWidth ?? manifestField?.columnWidth;
-  const label = field.label || manifestField?.label || fieldKey;
-  const queryKey = field.queryKey || manifestField?.queryKey || fieldKey;
-  const controlType = field.controlType || manifestField?.controlType || 'text';
+  const label = preferManifestMeta
+    ? manifestField?.label || field.label || fieldKey
+    : field.label || manifestField?.label || fieldKey;
+  const queryKey = preferManifestMeta
+    ? manifestField?.queryKey || field.queryKey || fieldKey
+    : field.queryKey || manifestField?.queryKey || fieldKey;
+  const controlType = preferManifestMeta
+    ? manifestField?.controlType || field.controlType || 'text'
+    : field.controlType || manifestField?.controlType || 'text';
+  const placeholder = preferManifestMeta
+    ? manifestField?.placeholder ?? field.placeholder ?? (label ? `请输入${label}` : '')
+    : field.placeholder ?? manifestField?.placeholder ?? (label ? `请输入${label}` : '');
+  const previewSchema = preferManifestMeta
+    ? manifestField?.previewSchema || field.previewSchema
+    : field.previewSchema || manifestField?.previewSchema;
 
   return {
     ...cloneField(field),
@@ -403,8 +432,8 @@ function normalizeField(
           : 'equals'),
     defaultMatchMode: field.defaultMatchMode || (controlType === 'text' ? 'contains' : 'exact'),
     optionSourceConfig: field.optionSourceConfig || {},
-    placeholder: field.placeholder ?? manifestField?.placeholder ?? (label ? `请输入${label}` : ''),
-    previewSchema: field.previewSchema || manifestField?.previewSchema,
+    placeholder,
+    previewSchema,
     hiddenButFilterable: field.hiddenButFilterable ?? false,
     layout,
     runtimeIssues: field.runtimeIssues || [],

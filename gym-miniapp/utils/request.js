@@ -1,4 +1,36 @@
-const BASE_URL = 'http://localhost:9090'
+const DEFAULT_BASE_URL = 'http://localhost:9090'
+const BASE_URL_STORAGE_KEY = 'gym_api_base_url'
+
+function normalizeBaseUrl(baseUrl) {
+  return typeof baseUrl === 'string' ? baseUrl.trim().replace(/\/+$/, '') : ''
+}
+
+function getRuntimeBaseUrl() {
+  const globalScope = typeof globalThis !== 'undefined' ? globalThis : {}
+  const appConfig = globalScope.GYM_MINIAPP_CONFIG
+  let appBaseUrl = ''
+  try {
+    const appGlobalData = typeof getApp === 'function' ? getApp()?.globalData : null
+    appBaseUrl = appGlobalData?.BASE_URL || appGlobalData?.baseUrl
+  } catch (error) {
+    appBaseUrl = ''
+  }
+  const globalBaseUrl = appConfig?.BASE_URL || appConfig?.baseUrl || appBaseUrl || globalScope.__GYM_API_BASE_URL__
+
+  let storedBaseUrl = ''
+  try {
+    storedBaseUrl = uni.getStorageSync(BASE_URL_STORAGE_KEY)
+  } catch (error) {
+    storedBaseUrl = ''
+  }
+
+  return normalizeBaseUrl(globalBaseUrl || storedBaseUrl) || DEFAULT_BASE_URL
+}
+
+function buildRequestUrl(url, params) {
+  const requestUrl = /^https?:\/\//.test(url) ? url : `${getRuntimeBaseUrl()}${url.startsWith('/') ? url : `/${url}`}`
+  return `${requestUrl}${stringifyParams(params)}`
+}
 
 export function getUser() {
   return uni.getStorageSync('gym_user') || null
@@ -22,7 +54,7 @@ export function request({ url, method = 'GET', data, params }) {
   const user = getUser()
   return new Promise((resolve, reject) => {
     uni.request({
-      url: `${BASE_URL}${url}${stringifyParams(params)}`,
+      url: buildRequestUrl(url, params),
       method,
       data,
       header: {

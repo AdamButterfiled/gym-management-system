@@ -108,7 +108,9 @@
                 >
                     <template #bodyCell="{ column, record }">
                         <template v-if="column.key === 'status'">
-                            <span>{{ record.status === 0 ? '停用' : '正常' }}</span>
+                            <span :class="['dict-status-tag', record.status === 0 ? 'dict-status-tag--disabled' : 'dict-status-tag--enabled']">
+                              {{ record.status === 0 ? '未启用' : '启用' }}
+                            </span>
                         </template>
                         <template v-if="column.key === 'action'">
                             <a-space>
@@ -160,8 +162,8 @@
           <template #field-status>
             <a-form-item label="状态">
               <a-select v-model:value="typeForm.status" class="modal-input-unified">
-                <a-select-option :value="1">正常</a-select-option>
-                <a-select-option :value="0">停用</a-select-option>
+                <a-select-option :value="1">启用</a-select-option>
+                <a-select-option :value="0">未启用</a-select-option>
               </a-select>
             </a-form-item>
           </template>
@@ -202,8 +204,8 @@
             <a-form-item label="状态">
               <div class="checkbox-wrapper" style="height: 40px;">
                 <a-radio-group v-model:value="dataForm.status">
-                  <a-radio :value="1">正常</a-radio>
-                  <a-radio :value="0">停用</a-radio>
+                  <a-radio :value="1">启用</a-radio>
+                  <a-radio :value="0">未启用</a-radio>
                 </a-radio-group>
               </div>
             </a-form-item>
@@ -242,6 +244,7 @@ import BatchDeleteButton from '@/components/common/BatchDeleteButton.vue';
 import StandardModal from '@/components/common/StandardModal.vue';
 import WorkspacePage from '@/components/common/WorkspacePage.vue';
 import { useStore } from 'vuex';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 interface SysDict {
   id?: number;
@@ -363,15 +366,17 @@ const onSearchChange = () => {
 };
 
 const baseColumns = [
+  { title: '字典标签', dataIndex: 'dictLabel', key: 'dictLabel', width: 180 },
+  { title: '字典键值', dataIndex: 'dictValue', key: 'dictValue', width: 160 },
   { title: '字典类型', dataIndex: 'dictType', key: 'dictType', width: 180 },
-  { title: '字典标签', dataIndex: 'dictLabel', key: 'dictLabel' },
-  { title: '字典键值', dataIndex: 'dictValue', key: 'dictValue' },
-  { title: '排序', dataIndex: 'sort', key: 'sort', width: 80 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+  { title: '排序', dataIndex: 'sort', key: 'sort', width: 80 },
   { title: '备注', dataIndex: 'remark', key: 'remark', width: 220 },
   { title: '操作', key: 'action', width: 200, fixed: 'right' },
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const dictColumnPriority = ['dictLabel', 'dictValue', 'dictType', 'status', 'sort', 'remark', 'action'];
+
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), dictColumnPriority));
 const typeFormFields = computed(() => getTargetFields('type-form'));
 const dataFormFields = computed(() => getTargetFields('data-form'));
 
@@ -575,6 +580,30 @@ onMounted(async () => {
  .search-wrap { margin-bottom: 15px; }
 
  .type-list { flex: 1; overflow-y: auto; padding-right: 4px; margin-top: 10px; }
+
+ .dict-status-tag {
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     min-width: 52px;
+     min-height: 28px;
+     padding: 0 10px;
+     border: 1px solid #e5e7eb;
+     border-radius: var(--mono-radius-pill);
+     color: #374151;
+     font-size: 13px;
+     font-weight: 400;
+     line-height: 1.35;
+     white-space: nowrap;
+ }
+
+ .dict-status-tag--enabled {
+     background: #f3f4f6;
+ }
+
+ .dict-status-tag--disabled {
+     background: #ffffff;
+ }
  
  .type-item { 
      display: flex; 
@@ -621,6 +650,19 @@ onMounted(async () => {
      color: rgba(255, 255, 255, 0.45);
  }
 
+ :global(.dark) .dict-status-tag {
+     border-color: rgba(255, 255, 255, 0.12);
+     color: rgba(255, 255, 255, 0.78);
+ }
+
+ :global(.dark) .dict-status-tag--enabled {
+     background: rgba(255, 255, 255, 0.10);
+ }
+
+ :global(.dark) .dict-status-tag--disabled {
+     background: transparent;
+ }
+
 
 
  :global(.dark) .type-text {
@@ -643,5 +685,75 @@ onMounted(async () => {
 }
 :global(.dark) .search-wrap .standard-input-wrapper .std-input-control {
     background-color: transparent !important; 
+}
+</style>
+
+<style>
+html.dark .dict-layout .title,
+html.dark .dict-layout .type-content,
+html.dark .dict-layout .type-text,
+html.dark .dict-layout .type-content .anticon,
+html.dark .dict-layout .type-content svg {
+  color: var(--mono-text) !important;
+}
+
+html.dark .dict-layout .form-label,
+html.dark .dict-layout .empty-text {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .dict-layout .type-item {
+  color: var(--mono-text) !important;
+}
+
+html.dark .dict-layout .type-item:hover,
+html.dark .dict-layout .type-item.light-yellow-bg {
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+html.dark .dict-layout .type-item.active {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--mono-text) !important;
+}
+
+html.dark .dict-layout .dict-status-tag,
+html.dark .dict-layout .dict-status-tag--enabled,
+html.dark .dict-layout .dict-status-tag--disabled {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--mono-text) !important;
+}
+
+html.dark .dict-layout .search-icon {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .dict-layout .search-wrap .standard-input-wrapper .std-input {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .dict-layout .search-wrap .standard-input-wrapper .std-input-control {
+  background: transparent !important;
+  color: var(--mono-control-text) !important;
+}
+
+html.dark .dict-layout .ant-pagination,
+html.dark .dict-layout .ant-pagination a,
+html.dark .dict-layout .ant-pagination-item,
+html.dark .dict-layout .ant-pagination-item a,
+html.dark .dict-layout .ant-pagination-total-text,
+html.dark .dict-layout .ant-pagination-options-quick-jumper {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .dict-layout .ant-pagination-item-active,
+html.dark .dict-layout .ant-pagination-item-active:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .dict-layout .ant-pagination-item-active a {
+  color: var(--mono-text) !important;
 }
 </style>

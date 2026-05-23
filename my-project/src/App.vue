@@ -5,13 +5,34 @@
 </template>
 
 <script setup lang="ts">
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
 import { theme as antTheme } from 'ant-design-vue';
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 
-const locale = zhCN;
+dayjs.locale('zh-cn');
+
+const pickerLang = {
+  ...zhCN.DatePicker.lang,
+  monthFormat: 'M月',
+  shortMonths: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+  shortWeekDays: ['日', '一', '二', '三', '四', '五', '六'],
+};
+
+const locale = {
+  ...zhCN,
+  DatePicker: {
+    ...zhCN.DatePicker,
+    lang: pickerLang,
+  },
+  Calendar: {
+    ...zhCN.Calendar,
+    lang: pickerLang,
+  },
+};
 const store = useStore();
 const route = useRoute();
 const BASE_FONT_FAMILY = '"Avenir Next", "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
@@ -89,7 +110,7 @@ const antdTheme = computed(() => {
   const lightFillTertiary = isGlass.value ? '#fafafa' : '#f7f7f5';
   const lightFillQuaternary = isGlass.value ? '#fcfcfc' : '#fbfbfa';
   const drawerBg = dark
-    ? (isGlass.value ? 'rgba(24, 24, 24, 0.9)' : '#181818')
+    ? '#1f1f1f'
     : (isGlass.value ? 'rgba(255, 255, 255, 0.98)' : '#ffffff');
 
   return {
@@ -103,10 +124,10 @@ const antdTheme = computed(() => {
       colorTextTertiary: dark ? 'rgba(255, 255, 255, 0.46)' : (isGlass.value ? '#9ca3af' : '#8a8f98'),
       colorBorder: dark ? 'rgba(255, 255, 255, 0.08)' : lightBorder,
       colorBorderSecondary: dark ? 'rgba(255, 255, 255, 0.06)' : lightBorderSecondary,
-      colorBgBase: dark ? '#141414' : lightContainerBg,
-      colorBgContainer: dark ? '#181818' : lightContainerBg,
-      colorBgElevated: dark ? '#1c1c1c' : lightElevatedBg,
-      colorBgLayout: dark ? '#141414' : lightLayoutBg,
+      colorBgBase: dark ? '#111111' : lightContainerBg,
+      colorBgContainer: dark ? '#1f1f1f' : lightContainerBg,
+      colorBgElevated: dark ? '#1f1f1f' : lightElevatedBg,
+      colorBgLayout: dark ? '#111111' : lightLayoutBg,
       colorFillSecondary: dark ? 'rgba(255, 255, 255, 0.08)' : lightFillSecondary,
       colorFillTertiary: dark ? 'rgba(255, 255, 255, 0.06)' : lightFillTertiary,
       colorFillQuaternary: dark ? 'rgba(255, 255, 255, 0.04)' : lightFillQuaternary,
@@ -120,7 +141,7 @@ const antdTheme = computed(() => {
       Layout: {
         headerBg: 'transparent',
         siderBg: 'transparent',
-        bodyBg: dark ? '#141414' : lightLayoutBg,
+        bodyBg: dark ? '#111111' : lightLayoutBg,
         triggerBg: 'transparent',
       },
       Menu: {

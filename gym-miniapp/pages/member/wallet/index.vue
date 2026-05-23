@@ -36,9 +36,17 @@
       <view class="section-title">最近支付单</view>
       <view v-for="item in payments" :key="item.id" class="purchase-item">
         <view>
-          <view>{{ item.paymentType }}</view>
-          <view class="muted">¥{{ item.amount }} · {{ item.status }}</view>
+          <view>{{ paymentTypeText(item.paymentType) }}</view>
+          <view class="muted">¥{{ item.amount }} · {{ paymentStatusText(item.status) }}</view>
         </view>
+        <button
+          v-if="item.status === 'UNPAID'"
+          class="btn-secondary pay-btn"
+          :disabled="payingPaymentNo === item.paymentNo"
+          @click="payPayment(item)"
+        >
+          {{ payingPaymentNo === item.paymentNo ? '支付中' : '支付' }}
+        </button>
       </view>
     </view>
   </view>
@@ -55,6 +63,21 @@ const membershipPackages = ref([])
 const privatePackages = ref([])
 const payments = ref([])
 const rechargeAmount = ref('300')
+const payingPaymentNo = ref('')
+
+const paymentTypeText = (type) => ({
+  RECHARGE: '余额充值',
+  MEMBERSHIP: '会籍套餐',
+  PRIVATE_PACKAGE: '私教课包',
+  BOOKING: '预约支付'
+}[type] || type)
+
+const paymentStatusText = (status) => ({
+  UNPAID: '待支付',
+  PAID: '已支付',
+  CLOSED: '已关闭',
+  REFUNDED: '已退款'
+}[status] || status)
 
 const loadData = async () => {
   const [homeRes, membershipRes, privateRes, paymentRes] = await Promise.all([
@@ -94,6 +117,18 @@ const purchase = async (paymentType, targetId) => {
   loadData()
 }
 
+const payPayment = async (item) => {
+  if (!item?.paymentNo || item.status !== 'UNPAID' || payingPaymentNo.value) return
+  payingPaymentNo.value = item.paymentNo
+  try {
+    await request({ url: `/member/payments/${item.paymentNo}/pay`, method: 'POST' })
+    uni.showToast({ title: '支付成功', icon: 'none' })
+    await loadData()
+  } finally {
+    payingPaymentNo.value = ''
+  }
+}
+
 onShow(loadData)
 </script>
 
@@ -104,5 +139,12 @@ onShow(loadData)
   align-items: center;
   padding: 18rpx 0;
   border-bottom: 1rpx solid #f0e6cf;
+}
+
+.pay-btn {
+  flex-shrink: 0;
+  min-width: 132rpx;
+  margin-left: 20rpx;
+  margin-right: 0;
 }
 </style>

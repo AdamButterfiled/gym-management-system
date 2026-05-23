@@ -34,9 +34,12 @@
 
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue';
+import { useStore } from 'vuex';
 import StandardButton from '@/components/common/StandardButton.vue';
 
 const attrs = useAttrs();
+const store = useStore();
+const isDark = computed(() => store.state.themeSettings?.isDark ?? false);
 
 defineProps({
   visible: {
@@ -83,7 +86,7 @@ const mergedBodyStyle = computed(() => ({
 }));
 
 const mergedMaskStyle = computed(() => ({
-  background: 'rgba(248, 248, 248, 0.82)',
+  background: isDark.value ? 'rgba(0, 0, 0, 0.72)' : 'rgba(248, 248, 248, 0.82)',
   backdropFilter: 'none',
   WebkitBackdropFilter: 'none',
   ...(((attrs.maskStyle || attrs['mask-style']) as Record<string, unknown> | undefined) || {}),

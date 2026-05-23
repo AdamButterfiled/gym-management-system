@@ -33,7 +33,7 @@
               </div>
             </div>
           </div>
-          <span class="style-label">透明极简白</span>
+          <span class="style-label">透明极简</span>
         </div>
         <div 
           class="style-card"
@@ -520,7 +520,7 @@ const presetColors = [
   overflow: hidden;
 }
 :global(.dark) .glass-preview {
-  background: #262626;
+  background: #111111;
 }
 
 /* Shine Animation */
@@ -598,7 +598,7 @@ const presetColors = [
   flex-direction: row;
 }
 :global(.dark) .traditional-preview {
-  background: #141414;
+  background: #111111;
   border: 1px solid #303030;
 }
 
@@ -637,7 +637,7 @@ const presetColors = [
   border-bottom: 1px solid rgba(17,17,17,0.05);
 }
 :global(.dark) .preview-header {
-  background: #1f1f1f;
+  background: #111111;
   border-bottom: 1px solid #303030;
 }
 .preview-content {
@@ -649,7 +649,7 @@ const presetColors = [
   box-shadow: 0 8px 18px rgba(15,23,42,0.04);
 }
 :global(.dark) .preview-content {
-  background: #141414;
+  background: #1f1f1f;
   border: 1px solid #303030;
 }
 
@@ -997,7 +997,7 @@ const presetColors = [
 }
 
 .dark .theme-settings-drawer .glass-preview {
-  background: linear-gradient(135deg, #1f1f1f 0%, #2c2c2c 100%);
+  background: #111111;
 }
 
 .dark .theme-settings-drawer .glass-preview .glass-window {
@@ -1011,17 +1011,17 @@ const presetColors = [
 }
 
 .dark .theme-settings-drawer .traditional-preview {
-  background: #000;
+  background: #111111;
   border: 1px solid #333;
 }
 
 .dark .theme-settings-drawer .preview-header {
-  background: #1f1f1f;
+  background: #111111;
   border-bottom: 1px solid #333;
 }
 
 .dark .theme-settings-drawer .preview-content {
-  background: #141414;
+  background: #1f1f1f;
   border: 1px solid #333;
 }
 
@@ -1115,5 +1115,79 @@ html.dark .card-label {
 }
 html.dark .system-icon-wrap {
     color: #fff !important;
+}
+
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper).ant-drawer,
+html.dark .theme-settings-drawer {
+  background: transparent !important;
+}
+
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-content,
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-wrapper-body,
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-header,
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-body,
+html.dark .theme-settings-drawer .ant-drawer-content,
+html.dark .theme-settings-drawer .ant-drawer-wrapper-body,
+html.dark .theme-settings-drawer .ant-drawer-header,
+html.dark .theme-settings-drawer .ant-drawer-body,
+html.dark .ant-drawer-content.theme-settings-drawer {
+  background: #1f1f1f !important;
+}
+
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-title,
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-close {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.dark :is(.glass-drawer-wrapper, .traditional-drawer-wrapper) .ant-drawer-content-wrapper {
+  box-shadow: -8px 0 20px rgba(0, 0, 0, 0.36) !important;
+}
+
+html.dark .theme-settings-drawer :is(.style-card, .scene-card, .system-card) {
+  background: #222222 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+  box-shadow: none !important;
+}
+
+html.dark .theme-settings-drawer :is(.style-card, .scene-card, .system-card):hover {
+  background: #2a2a2a !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+html.dark .theme-settings-drawer :is(.style-card, .scene-card, .system-card).active {
+  background: #2a2a2a !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  color: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .theme-settings-drawer :is(.section-desc, .style-label, .card-label) {
+  color: rgba(255, 255, 255, 0.66) !important;
+}
+
+html.dark .theme-settings-drawer :is(.style-card, .scene-card, .system-card).active :is(.style-label, .card-label) {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html.dark {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: #111111 !important;
+  color: var(--mono-text) !important;
+}
+
+html.dark body,
+html.dark #app {
+  margin: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: #111111 !important;
 }
 </style>

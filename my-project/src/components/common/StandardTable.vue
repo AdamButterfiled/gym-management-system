@@ -1,16 +1,20 @@
 <template>
   <div :class="containerClass">
-    <a-table v-bind="tableAttrs">
-      <template #bodyCell="scope">
-        <slot name="bodyCell" v-bind="scope" />
-      </template>
-      <template v-if="$slots.headerCell" #headerCell="scope">
-        <slot name="headerCell" v-bind="scope" />
-      </template>
-      <template v-if="$slots.summary" #summary>
-        <slot name="summary" />
-      </template>
-    </a-table>
+    <div :class="['std-table-main', $slots.rightRail && 'std-table-main--with-rail']">
+      <a-table v-bind="tableAttrs">
+        <template #bodyCell="scope">
+          <slot name="bodyCell" v-bind="scope" />
+        </template>
+        <template v-if="$slots.headerCell" #headerCell="scope">
+          <slot name="headerCell" v-bind="scope" />
+        </template>
+        <template v-if="$slots.summary" #summary>
+          <slot name="summary" />
+        </template>
+      </a-table>
+
+      <slot name="rightRail" />
+    </div>
 
     <div v-if="menuPaginationState?.showFooter" class="std-table-footer">
       <Select
@@ -81,7 +85,10 @@
                     v-else
                     :value="item.value"
                     size="icon-sm"
-                    class="std-table-pagination-button std-table-pagination-page"
+                    :class="[
+                      'std-table-pagination-button std-table-pagination-page',
+                      item.value === page && 'std-table-pagination-page--current',
+                    ]"
                     :title="item.value === page ? '双击直接跳转页码' : undefined"
                     @dblclick.stop.prevent="item.value === page && startPageEdit(page)"
                   >
@@ -367,9 +374,61 @@ const containerClass = computed(() => {
 </script>
 
 <style scoped>
+.table-surface--menu-list {
+  --std-table-footer-bg: #ffffff;
+  --std-table-edge-gutter: 20px;
+  --std-table-scrollbar-thumb: rgba(15, 23, 42, 0.1);
+  --std-table-scrollbar-thumb-hover: rgba(15, 23, 42, 0.18);
+}
+
+:global(html.dark .table-surface--menu-list) {
+  --std-table-footer-bg: #111111;
+  --std-table-scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --std-table-scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+}
+
+.table-surface--menu-list--custom-pagination {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.table-surface--menu-list--custom-pagination .std-table-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.table-surface--menu-list--custom-pagination .std-table-main > :deep(.ant-table-wrapper) {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
 .table-surface--menu-list--custom-pagination :deep(.ant-table-container) {
   overflow: hidden;
   border-radius: var(--mono-radius-xl) !important;
+}
+
+.table-surface--menu-list--custom-pagination :deep(.ant-table-wrapper),
+.table-surface--menu-list--custom-pagination :deep(.ant-spin-nested-loading),
+.table-surface--menu-list--custom-pagination :deep(.ant-spin-container) {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-surface--menu-list--custom-pagination :deep(.ant-table) {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .table-surface--menu-list--custom-pagination :deep(.ant-table),
@@ -385,43 +444,86 @@ const containerClass = computed(() => {
   border-bottom: none !important;
 }
 
+.table-surface--menu-list :deep(.ant-table-cell-fix-right-first::after),
+.table-surface--menu-list :deep(.ant-table-cell-fix-right-last::after),
+.table-surface--menu-list :deep(.ant-table-cell-fix-left-first::after),
+.table-surface--menu-list :deep(.ant-table-cell-fix-left-last::after) {
+  box-shadow: none !important;
+}
+
 .table-surface--menu-list--custom-pagination .std-table-footer {
+  position: relative;
+  z-index: 30;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 14px;
-  padding: 12px 0 0;
+  margin-top: 18px;
+  padding: 14px 0 14px;
+  min-height: 66px;
+  border-top: none;
+  background: var(--std-table-footer-bg);
+  overflow: visible;
 }
 
 .table-surface--menu-list--custom-pagination .std-table-size-trigger {
-  min-width: auto;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  min-width: 104px;
+  width: auto;
   height: 32px;
-  border: none !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
   border-radius: var(--mono-radius-pill) !important;
-  background: var(--mono-select-trigger-bg) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
   box-shadow:
-    inset 0 1px 0 var(--mono-select-glass-highlight),
-    inset 0 0 0 1px var(--mono-select-glass-stroke) !important;
+    0 1px 2px rgba(15, 23, 42, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
   color: var(--mono-text-secondary) !important;
-  padding: 0 10px !important;
+  padding: 0 11px 0 12px !important;
   gap: 6px !important;
   font-size: 13px !important;
   font-weight: 400;
-  backdrop-filter: blur(28px) saturate(180%);
+  white-space: nowrap;
+  overflow: visible;
+  backdrop-filter: none;
+}
+
+.table-surface--menu-list--custom-pagination .std-table-size-trigger :deep(span) {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .table-surface--menu-list--custom-pagination .std-table-size-trigger:hover {
   color: var(--mono-text) !important;
-  background: var(--mono-select-trigger-bg-hover) !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+  background: #ffffff !important;
+}
+
+.table-surface--menu-list--custom-pagination .std-table-size-trigger[data-state='open'] {
+  color: var(--mono-text) !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+  background: #ffffff !important;
+}
+
+.table-surface--menu-list--custom-pagination .std-table-size-trigger :deep(svg) {
+  opacity: 0.58;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.table-surface--menu-list--custom-pagination .std-table-size-trigger[data-state='open'] :deep(svg) {
+  opacity: 0.82;
+  transform: rotate(180deg);
 }
 
 .table-surface--menu-list--custom-pagination .std-table-size-content {
-  border: none !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
   border-radius: var(--mono-radius-lg) !important;
-  background: var(--mono-select-menu-bg) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
   box-shadow:
-    inset 0 1px 0 var(--mono-select-glass-highlight),
-    inset 0 0 0 1px var(--mono-select-glass-stroke) !important;
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
   backdrop-filter: blur(32px) saturate(185%);
 }
 
@@ -461,7 +563,7 @@ const containerClass = computed(() => {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: var(--mono-text-secondary) !important;
+  color: #8a8f98 !important;
   padding: 0 !important;
 }
 
@@ -472,6 +574,7 @@ const containerClass = computed(() => {
   opacity: 0.72;
 }
 
+.table-surface--menu-list--custom-pagination .std-table-pagination-page--current,
 .table-surface--menu-list--custom-pagination .std-table-pagination-page[data-selected='true'] {
   color: var(--mono-text) !important;
   font-weight: 400 !important;
@@ -604,6 +707,39 @@ const containerClass = computed(() => {
 .default-yellow-mode :deep(th) {
   border-right: none !important;
   border-left: none !important;
+}
+
+html.dark .default-yellow-mode :deep(.ant-table-header),
+html.dark .default-yellow-mode :deep(.ant-table),
+html.dark .default-yellow-mode :deep(.ant-table-container),
+html.dark .default-yellow-mode :deep(.ant-table-content),
+html.dark .default-yellow-mode :deep(.ant-table-body),
+html.dark .default-yellow-mode :deep(.ant-table-tbody) {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .default-yellow-mode :deep(.ant-table-thead > tr > th) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .default-yellow-mode :deep(.ant-table-tbody > tr > td),
+html.dark .default-yellow-mode :deep(.ant-table-tbody > tr:nth-child(even) > td),
+html.dark .default-yellow-mode :deep(.ant-table-tbody > tr:nth-child(odd) > td) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark .default-yellow-mode :deep(.ant-table-tbody > tr:hover > td) {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.dark .default-yellow-mode.table-surface--menu-list :deep(.ant-table-cell-fix-left),
+html.dark .default-yellow-mode.table-surface--menu-list :deep(.ant-table-cell-fix-right) {
+  background: #111111 !important;
 }
 
 .transparent-glass-mode :deep(.ant-table),
@@ -943,7 +1079,7 @@ html.dark .transparent-glass-mode :deep(.ant-table-tbody > tr:hover > td) {
 }
 
 html.dark .transparent-glass-mode :deep(.ant-table-container) {
-  background: rgba(18, 18, 18, 0.35) !important;
+  background: #111111 !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -953,7 +1089,11 @@ html.dark .transparent-glass-mode.table-surface--menu-list :deep(.ant-table-tbod
 
 html.dark .transparent-glass-mode.table-surface--menu-list :deep(.ant-table-cell-fix-left),
 html.dark .transparent-glass-mode.table-surface--menu-list :deep(.ant-table-cell-fix-right) {
-  background: rgba(18, 18, 18, 0.55) !important;
+  background: #111111 !important;
+}
+
+html.dark .table-surface--menu-list--custom-pagination .std-table-footer {
+  background: #111111 !important;
 }
 
 html.dark .table-surface--menu-list--custom-pagination .std-table-pagination-button {
@@ -976,7 +1116,56 @@ html.dark .table-surface--menu-list--custom-pagination .std-table-size-content {
 }
 
 html.dark .table-surface--menu-list--custom-pagination .std-table-pagination-button:not(:disabled):hover,
+html.dark .table-surface--menu-list--custom-pagination .std-table-pagination-page--current,
 html.dark .table-surface--menu-list--custom-pagination .std-table-pagination-page[data-selected='true'] {
   color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.table-surface--menu-list--custom-pagination :deep(.ant-table-tbody > tr:last-child > td),
+.table-surface--menu-list--custom-pagination :deep(.ant-table-tbody > tr:last-of-type > td) {
+  border-bottom-color: transparent !important;
+}
+
+.table-surface--menu-list :deep(.ant-table-thead > tr > th:first-child),
+.table-surface--menu-list :deep(.ant-table-tbody > tr > td:first-child) {
+  padding-left: var(--std-table-edge-gutter) !important;
+}
+
+.table-surface--menu-list :deep(.ant-table-thead > tr > th:last-child),
+.table-surface--menu-list :deep(.ant-table-tbody > tr > td:last-child) {
+  padding-right: var(--std-table-edge-gutter) !important;
+}
+
+.table-surface--menu-list .std-table-main--with-rail :deep(.ant-table-thead > tr > th:last-child),
+.table-surface--menu-list .std-table-main--with-rail :deep(.ant-table-tbody > tr > td:last-child) {
+  padding-right: 14px !important;
+}
+
+.table-surface--menu-list :deep(.ant-table-content),
+.table-surface--menu-list :deep(.ant-table-body) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--std-table-scrollbar-thumb) transparent;
+}
+
+.table-surface--menu-list :deep(.ant-table-content::-webkit-scrollbar),
+.table-surface--menu-list :deep(.ant-table-body::-webkit-scrollbar) {
+  width: 3px;
+  height: 3px;
+}
+
+.table-surface--menu-list :deep(.ant-table-content::-webkit-scrollbar-track),
+.table-surface--menu-list :deep(.ant-table-body::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+.table-surface--menu-list :deep(.ant-table-content::-webkit-scrollbar-thumb),
+.table-surface--menu-list :deep(.ant-table-body::-webkit-scrollbar-thumb) {
+  border-radius: 999px;
+  background: var(--std-table-scrollbar-thumb);
+}
+
+.table-surface--menu-list :deep(.ant-table-content::-webkit-scrollbar-thumb:hover),
+.table-surface--menu-list :deep(.ant-table-body::-webkit-scrollbar-thumb:hover) {
+  background: var(--std-table-scrollbar-thumb-hover);
 }
 </style>

@@ -115,7 +115,8 @@
           :class="{
             'transparent-glass-mode': route.meta.style === 'glass',
             'default-yellow-mode': route.meta.style !== 'glass',
-            'is-dashboard': route.path === '/dashboard' || route.name === 'DashboardPage'
+            'is-dashboard': route.path === '/dashboard' || route.name === 'DashboardPage',
+            'content--fit-table': isFitTableRoute
           }"
         >
           <div class="content-shell">
@@ -199,24 +200,24 @@ const sidebarWidth = computed(() => (collapsed.value ? 80 : 259));
 const shellSurfaceVars = computed(() => {
   if (isTraditional.value && isDark.value) {
     return {
-      '--shell-surface-bg': 'rgba(24, 24, 24, 0.88)',
-      '--shell-surface-blur': 'blur(12px)',
-      '--shell-header-bg': 'rgba(24, 24, 24, 0.92)',
-      '--shell-header-blur': 'blur(12px)',
+      '--shell-surface-bg': '#1f1f1f',
+      '--shell-surface-blur': 'none',
+      '--shell-header-bg': '#111111',
+      '--shell-header-blur': 'none',
       '--shell-surface-divider': 'rgba(255,255,255,0.08)',
-      '--shell-trigger-border': 'rgba(255,255,255,0.06)',
+      '--shell-trigger-border': 'rgba(255,255,255,0.1)',
       '--shell-trigger-icon': 'rgba(255,255,255,0.72)',
-      '--shell-trigger-hover-bg': 'rgba(255,255,255,0.08)',
+      '--shell-trigger-hover-bg': '#2a2a2a',
       '--shell-trigger-hover-text': '#ffffff',
-      '--shell-brand-text': 'rgba(255,255,255,0.92)',
-      '--shell-content-bg': 'rgba(24, 24, 24, 0.98)',
-      '--shell-menu-text': 'rgba(255,255,255,0.68)',
-      '--shell-menu-text-hover': 'rgba(255,255,255,0.92)',
-      '--shell-menu-selected-text': 'rgba(255,255,255,0.92)',
-      '--shell-menu-selected-bg': 'rgba(255,255,255,0.06)',
+      '--shell-brand-text': 'rgba(255,255,255,0.94)',
+      '--shell-content-bg': '#111111',
+      '--shell-menu-text': 'rgba(255,255,255,0.74)',
+      '--shell-menu-text-hover': 'rgba(255,255,255,0.94)',
+      '--shell-menu-selected-text': '#ffffff',
+      '--shell-menu-selected-bg': '#333333',
       '--shell-menu-selected-border': 'rgba(255,255,255,0.08)',
-      '--shell-menu-icon': 'rgba(255,255,255,0.65)',
-      '--shell-menu-arrow': 'rgba(255,255,255,0.45)',
+      '--shell-menu-icon': 'rgba(255,255,255,0.7)',
+      '--shell-menu-arrow': 'rgba(255,255,255,0.55)',
     };
   }
 
@@ -245,24 +246,24 @@ const shellSurfaceVars = computed(() => {
 
   if (isDark.value) {
     return {
-      '--shell-surface-bg': 'rgba(20, 24, 31, 0.78)',
-      '--shell-surface-blur': 'blur(18px)',
-      '--shell-header-bg': 'rgba(20, 24, 31, 0.86)',
-      '--shell-header-blur': 'blur(18px)',
-      '--shell-surface-divider': 'rgba(255,255,255,0.05)',
-      '--shell-trigger-border': 'rgba(255,255,255,0.06)',
+      '--shell-surface-bg': '#1f1f1f',
+      '--shell-surface-blur': 'none',
+      '--shell-header-bg': '#111111',
+      '--shell-header-blur': 'none',
+      '--shell-surface-divider': 'rgba(255,255,255,0.08)',
+      '--shell-trigger-border': 'rgba(255,255,255,0.1)',
       '--shell-trigger-icon': 'rgba(255,255,255,0.72)',
-      '--shell-trigger-hover-bg': 'rgba(255,255,255,0.15)',
+      '--shell-trigger-hover-bg': '#2a2a2a',
       '--shell-trigger-hover-text': '#ffffff',
-      '--shell-brand-text': 'rgba(255,255,255,0.92)',
-      '--shell-content-bg': 'rgba(20, 24, 31, 0.72)',
-      '--shell-menu-text': 'rgba(255,255,255,0.66)',
-      '--shell-menu-text-hover': 'rgba(255,255,255,0.92)',
-      '--shell-menu-selected-text': 'rgba(255,255,255,0.92)',
-      '--shell-menu-selected-bg': 'rgba(255,255,255,0.06)',
+      '--shell-brand-text': 'rgba(255,255,255,0.94)',
+      '--shell-content-bg': '#111111',
+      '--shell-menu-text': 'rgba(255,255,255,0.74)',
+      '--shell-menu-text-hover': 'rgba(255,255,255,0.94)',
+      '--shell-menu-selected-text': '#ffffff',
+      '--shell-menu-selected-bg': '#333333',
       '--shell-menu-selected-border': 'rgba(255,255,255,0.08)',
-      '--shell-menu-icon': 'rgba(255,255,255,0.6)',
-      '--shell-menu-arrow': 'rgba(255,255,255,0.45)',
+      '--shell-menu-icon': 'rgba(255,255,255,0.7)',
+      '--shell-menu-arrow': 'rgba(255,255,255,0.55)',
     };
   }
 
@@ -289,7 +290,12 @@ const shellSurfaceVars = computed(() => {
 });
 const layoutStyle = computed(() => ({
   minHeight: '100vh',
+  width: '100%',
+  maxWidth: '100vw',
+  overflowX: 'hidden',
   '--shell-side-width': `${sidebarWidth.value}px`,
+  '--shell-header-height': '56px',
+  '--shell-sider-trigger-height': '48px',
   ...shellSurfaceVars.value,
 }));
 
@@ -301,6 +307,9 @@ const rootClasses = computed(() => ({
   'theme-ledger-shell': ledgerShell.value,
   'theme-no-radius': !hasBorderRadius.value,
 }));
+
+const fitTableRoutes = new Set(['/course', '/private-schedule', '/sys/form-config']);
+const isFitTableRoute = computed(() => fitTableRoutes.has(route.path));
 
 const siderStyle = computed(() => ({
   top: '56px',
@@ -389,6 +398,17 @@ onMounted(() => {
   backdrop-filter: var(--shell-header-blur);
   -webkit-backdrop-filter: var(--shell-header-blur);
   transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.theme-dark {
+  background: var(--mono-bg) !important;
+}
+
+.theme-dark :deep(.ant-layout),
+.theme-dark :deep(.ant-layout-header),
+.theme-dark :deep(.ant-layout-sider),
+.theme-dark :deep(.ant-layout-content) {
+  background: var(--mono-bg) !important;
 }
 
 .header-left {
@@ -509,6 +529,19 @@ onMounted(() => {
   transition: background 0.3s, border-color 0.3s, box-shadow 0.3s, backdrop-filter 0.3s;
 }
 
+.content.content--fit-table {
+  max-width: calc(100vw - var(--shell-side-width));
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.content.content--fit-table .content-shell {
+  height: calc(100vh - 56px);
+  min-height: 0;
+  overflow: hidden;
+}
+
 .theme-glass .content-shell {
   border: none;
   backdrop-filter: none;
@@ -524,11 +557,13 @@ onMounted(() => {
 .theme-dark.theme-glass .content-shell {
   border-color: transparent;
   box-shadow: none;
+  background: transparent;
 }
 
 .theme-dark.theme-traditional .content-shell {
   border-color: transparent;
   box-shadow: none;
+  background: transparent;
 }
 
 .theme-ledger-shell .content-shell {
@@ -536,6 +571,12 @@ onMounted(() => {
   margin-top: 16px;
   border-radius: var(--mono-radius-xl) 0 0 0;
   background: var(--shell-content-bg);
+}
+
+.theme-ledger-shell .content.content--fit-table .content-shell {
+  height: calc(100vh - 72px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .theme-ledger-shell .content {
@@ -566,11 +607,13 @@ onMounted(() => {
 .theme-ledger-shell.theme-dark.theme-glass .content-shell {
   border-color: rgba(255, 255, 255, 0.06);
   box-shadow: none;
+  background: var(--mono-bg);
 }
 
 .theme-ledger-shell.theme-dark.theme-traditional .content-shell {
   border-color: rgba(255, 255, 255, 0.05);
   box-shadow: none;
+  background: var(--mono-bg);
 }
 
 :deep(.ant-layout-sider-trigger) {
@@ -589,10 +632,17 @@ onMounted(() => {
   background-color: var(--shell-trigger-hover-bg) !important;
 }
 
+:deep(.ant-layout-sider) {
+  overflow: hidden !important;
+}
+
 :deep(.ant-layout-sider-children) {
-  height: calc(100vh - 56px) !important;
+  height: calc(100vh - var(--shell-header-height) - var(--shell-sider-trigger-height)) !important;
+  max-height: calc(100vh - var(--shell-header-height) - var(--shell-sider-trigger-height)) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  box-sizing: border-box;
+  padding-bottom: 8px;
   scroll-behavior: smooth;
 }
 

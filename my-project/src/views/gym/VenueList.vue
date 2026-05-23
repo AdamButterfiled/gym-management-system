@@ -140,6 +140,7 @@ import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
 import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
 import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 const { currentStyle, loadMenuConfig } = usePageStyle();
 const modalVisible = ref(false);
@@ -187,19 +188,20 @@ const formState = reactive<VenueResource>({
 });
 
 const baseColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '场馆名称', dataIndex: 'name', key: 'name' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: '位置', dataIndex: 'location', key: 'location' },
-  { title: '容量', dataIndex: 'capacity', key: 'capacity', width: 100 },
   { title: '价格', dataIndex: 'pricePerHour', key: 'pricePerHour', width: 120 },
   { title: '开放时间', dataIndex: 'openTime', key: 'openTime', width: 120 },
   { title: '关闭时间', dataIndex: 'closeTime', key: 'closeTime', width: 120 },
-  { title: '说明', dataIndex: 'description', key: 'description', width: 220 },
+  { title: '容量', dataIndex: 'capacity', key: 'capacity', width: 100 },
   { title: '布局', dataIndex: 'layoutJson', key: 'layoutJson', width: 120 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+  { title: '说明', dataIndex: 'description', key: 'description', width: 220 },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '操作', key: 'action', width: 140 }
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const venueColumnPriority = ['name', 'status', 'location', 'pricePerHour', 'openTime', 'closeTime', 'capacity', 'layoutJson', 'description', 'id', 'action'];
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), venueColumnPriority));
 
 const resetForm = () => {
   Object.assign(formState, {

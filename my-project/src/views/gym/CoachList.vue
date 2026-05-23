@@ -151,6 +151,7 @@ import WorkspacePage from '@/components/common/WorkspacePage.vue';
 import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
 import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 const { currentStyle, loadMenuConfig } = usePageStyle();
 const modalVisible = ref(false);
@@ -196,20 +197,21 @@ const formState = reactive<CoachProfile>({
 });
 
 const baseColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '姓名', dataIndex: 'name', key: 'name' },
-  { title: '性别', dataIndex: 'gender', key: 'gender', width: 90 },
-  { title: '年龄', dataIndex: 'age', key: 'age', width: 90 },
   { title: '电话', dataIndex: 'phone', key: 'phone' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: '专长', dataIndex: 'specialization', key: 'specialization' },
-  { title: '入职日期', dataIndex: 'entryDate', key: 'entryDate', width: 140 },
   { title: '时薪', dataIndex: 'hourlyPrice', key: 'hourlyPrice', width: 120 },
   { title: '评分', dataIndex: 'rating', key: 'rating', width: 150 },
+  { title: '性别', dataIndex: 'gender', key: 'gender', width: 90 },
+  { title: '年龄', dataIndex: 'age', key: 'age', width: 90 },
+  { title: '入职日期', dataIndex: 'entryDate', key: 'entryDate', width: 140 },
   { title: '简介', dataIndex: 'intro', key: 'intro', width: 220 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '操作', key: 'action', width: 140 }
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const coachColumnPriority = ['name', 'phone', 'status', 'specialization', 'hourlyPrice', 'rating', 'gender', 'age', 'entryDate', 'intro', 'id', 'action'];
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), coachColumnPriority));
 
 const resetForm = () => {
   Object.assign(formState, {

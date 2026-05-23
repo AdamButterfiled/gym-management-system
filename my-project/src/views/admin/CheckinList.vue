@@ -35,7 +35,13 @@
         :pagination="pagination"
         rowKey="id"
         @change="handleTableChange"
-      />
+      >
+        <template #bodyCell="{ column, record }: { column: any; record: CheckinRecord }">
+          <template v-if="column.key === 'checkinTime'">
+            {{ formatDateTime(record.checkinTime) }}
+          </template>
+        </template>
+      </StandardTable>
     </section>
   </WorkspacePage>
 
@@ -51,6 +57,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import dayjs from 'dayjs';
 import { message } from 'ant-design-vue';
 import request from '@/request';
 import { CheckinRecord } from '@/types';
@@ -61,6 +68,7 @@ import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
 import StandardButton from '@/components/common/StandardButton.vue';
 import StandardTable from '@/components/common/StandardTable.vue';
 import WorkspacePage from '@/components/common/WorkspacePage.vue';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 const { currentStyle, loadMenuConfig } = usePageStyle();
 const token = ref('');
@@ -89,15 +97,25 @@ const {
 });
 
 const baseColumns = [
-  { title: '记录ID', dataIndex: 'id', key: 'id', width: 100 },
-  { title: '预约单ID', dataIndex: 'bookingOrderId', key: 'bookingOrderId', width: 120 },
-  { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 100 },
   { title: '签到码', dataIndex: 'checkinCode', key: 'checkinCode', width: 260 },
   { title: '签到时间', dataIndex: 'checkinTime', key: 'checkinTime', width: 180 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 120 },
-  { title: '核销人', dataIndex: 'operatorName', key: 'operatorName', width: 120 }
+  { title: '核销人', dataIndex: 'operatorName', key: 'operatorName', width: 120 },
+  { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 100 },
+  { title: '预约单ID', dataIndex: 'bookingOrderId', key: 'bookingOrderId', width: 120 },
+  { title: '记录ID', dataIndex: 'id', key: 'id', width: 100 }
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const checkinColumnPriority = ['checkinCode', 'checkinTime', 'status', 'operatorName', 'userId', 'bookingOrderId', 'id'];
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), checkinColumnPriority));
+
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : value.replace('T', ' ');
+};
 
 const consumeToken = async () => {
   if (!token.value) {

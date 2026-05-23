@@ -120,6 +120,7 @@ import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
 import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
 import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 // Page Style
 const { currentStyle, loadMenuConfig } = usePageStyle();
@@ -173,15 +174,16 @@ const venueNameMap = computed<Record<number, string>>(() => {
 });
 
 const baseColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '器材名称', dataIndex: 'name', key: 'name' },
   { title: '所属场馆', dataIndex: 'venueId', key: 'venueId', width: 160 },
-  { title: '描述', dataIndex: 'description', key: 'description' },
-  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
   { title: '状态', dataIndex: 'status', key: 'status' },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
+  { title: '描述', dataIndex: 'description', key: 'description' },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '操作', key: 'action', width: 150 },
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const equipmentColumnPriority = ['name', 'venueId', 'status', 'quantity', 'description', 'id', 'action'];
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), equipmentColumnPriority));
 
 const loadOptions = async () => {
     const venueRes = await request.get('/admin/venues/page', { params: { pageNum: 1, pageSize: 200 } });

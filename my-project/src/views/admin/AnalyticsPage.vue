@@ -131,7 +131,7 @@ const runtimeConfig = ref<FormPageConfig | null>(null);
 const maxRevenue = computed(() => Math.max(...analytics.revenues, 1));
 const isDark = computed(() => store.state.themeSettings?.isDark ?? false);
 const chartStroke = computed(() => (isDark.value ? 'rgba(255, 255, 255, 0.92)' : '#111111'));
-const chartPointFill = computed(() => (isDark.value ? '#181818' : '#ffffff'));
+const chartPointFill = computed(() => (isDark.value ? '#111111' : '#ffffff'));
 const chartPointStroke = computed(() => chartStroke.value);
 const pointList = computed(() => analytics.revenues.map((value, index) => ({
   x: 40 + index * 90,

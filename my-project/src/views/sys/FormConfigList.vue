@@ -1,9 +1,5 @@
 <template>
-  <WorkspacePage title="表单管理">
-    <template #meta>
-      <span class="page-meta">按菜单结构定位页面，再分别配置搜索区、表格和 Modal 表单。</span>
-    </template>
-
+  <WorkspacePage title="表单管理" class="form-config-workspace">
     <template #actions>
       <StandardButton type="default" icon="reload" @click="handleReloadWorkspace">刷新元数据</StandardButton>
       <StandardButton type="default" :disabled="!activeDraft" @click="openCreateTargetModal">补充目标</StandardButton>
@@ -17,7 +13,6 @@
         <div class="sidebar-head">
           <div>
             <h2 class="section-title">菜单树</h2>
-            <p class="section-sub">按真实菜单层级查找页面，不再靠平铺列表猜页面。</p>
           </div>
         </div>
 
@@ -29,65 +24,85 @@
         />
 
         <div class="tree-panel">
-          <a-tree
-              v-if="renderMenuTree.length"
-              class="tree-menu"
-              block-node
-              :tree-data="renderMenuTree"
-              :selectedKeys="selectedMenuTreeKeys"
-              :expandedKeys="visibleExpandedTreeKeys"
-              :show-line="{ showLeafIcon: false }"
-              @select="handleTreeSelect"
-              @expand="handleTreeExpand"
-          >
-            <template #switcherIcon="{ expanded, isLeaf }">
-              <span v-if="isLeaf" class="ant-tree-switcher-leaf-line tree-switcher-line" aria-hidden="true"/>
-              <span v-else class="tree-switcher-icon" aria-hidden="true">
-                <component :is="expanded ? DownOutlined : RightOutlined"/>
-              </span>
-            </template>
-            <template #title="{ title: nodeTitle, icon: nodeIcon, selection, path, children }">
-              <div class="tree-node-row">
-                <span class="tree-node-icon" aria-hidden="true">
-                  <component :is="resolveTreeIcon({ icon: nodeIcon, selection })"/>
+          <template v-if="renderMenuTree.length || renderAuxiliaryTree.length">
+            <a-tree
+                v-if="renderMenuTree.length"
+                class="tree-menu"
+                block-node
+                :tree-data="renderMenuTree"
+                :selectedKeys="selectedMenuTreeKeys"
+                :expandedKeys="visibleExpandedTreeKeys"
+                :show-line="{ showLeafIcon: false }"
+                @select="handleTreeSelect"
+                @expand="handleTreeExpand"
+            >
+              <template #switcherIcon="{ expanded, isLeaf }">
+                <span v-if="isLeaf" class="ant-tree-switcher-leaf-line tree-switcher-line" aria-hidden="true"/>
+                <span v-else class="tree-switcher-icon" aria-hidden="true">
+                  <component :is="expanded ? DownOutlined : RightOutlined"/>
                 </span>
-                <div class="tree-row-content">
-                  <span class="tree-row-title">{{ nodeTitle }}</span>
-                  <span>{{ treeNodeMeta({selection, path, children}) }}</span>
+              </template>
+              <template #title="{ title: nodeTitle, icon: nodeIcon, selection, path, children }">
+                <div class="tree-node-row">
+                  <span class="tree-node-icon" aria-hidden="true">
+                    <component :is="resolveTreeIcon({ icon: nodeIcon, selection })"/>
+                  </span>
+                  <div class="tree-row-content">
+                    <span class="tree-row-title">{{ nodeTitle }}</span>
+                    <span>{{ treeNodeMeta({selection, path, children}) }}</span>
+                  </div>
+                  <span
+                      v-if="selection"
+                      :class="['status-chip', `status-chip--${selection.status}`]"
+                  >
+                    <WarningOutlined v-if="selection.status === 'issue'" class="status-chip-icon"/>
+                    {{ statusLabel(selection.status) }}
+                  </span>
                 </div>
-                <span
-                    v-if="selection"
-                    :class="['status-chip', `status-chip--${selection.status}`]"
-                >
-                  {{ statusLabel(selection.status) }}
+              </template>
+            </a-tree>
+
+            <div v-if="renderMenuTree.length && renderAuxiliaryTree.length" class="tree-section-divider"/>
+
+            <a-tree
+                v-if="renderAuxiliaryTree.length"
+                class="tree-menu tree-menu--auxiliary"
+                block-node
+                :tree-data="renderAuxiliaryTree"
+                :selectedKeys="selectedAuxiliaryTreeKeys"
+                :expandedKeys="visibleAuxiliaryExpandedTreeKeys"
+                :show-line="{ showLeafIcon: false }"
+                @select="handleAuxiliaryTreeSelect"
+                @expand="handleAuxiliaryTreeExpand"
+            >
+              <template #switcherIcon="{ expanded, isLeaf }">
+                <span v-if="isLeaf" class="ant-tree-switcher-leaf-line tree-switcher-line" aria-hidden="true"/>
+                <span v-else class="tree-switcher-icon" aria-hidden="true">
+                  <component :is="expanded ? DownOutlined : RightOutlined"/>
                 </span>
-              </div>
-            </template>
-          </a-tree>
+              </template>
+              <template #title="{ title: nodeTitle, icon: nodeIcon, selection, path, children, nodeMeta }">
+                <div class="tree-node-row">
+                  <span class="tree-node-icon" aria-hidden="true">
+                    <component :is="resolveTreeIcon({ icon: nodeIcon, selection })"/>
+                  </span>
+                  <div class="tree-row-content">
+                    <span class="tree-row-title">{{ nodeTitle }}</span>
+                    <span>{{ treeNodeMeta({selection, path, children, nodeMeta}) }}</span>
+                  </div>
+                  <span
+                      v-if="selection"
+                      :class="['status-chip', `status-chip--${selection.status}`]"
+                  >
+                    <WarningOutlined v-if="selection.status === 'issue'" class="status-chip-icon"/>
+                    {{ statusLabel(selection.status) }}
+                  </span>
+                </div>
+              </template>
+            </a-tree>
+          </template>
 
           <div v-else class="empty-hint">没有匹配的菜单节点。</div>
-        </div>
-
-        <div v-if="filteredUnclassifiedSelections.length" class="unclassified-panel">
-          <div class="sidebar-subhead">
-            <h3>未归类页面</h3>
-            <span>未挂菜单的已存配置或扫描结果。</span>
-          </div>
-          <div
-              v-for="item in filteredUnclassifiedSelections"
-              :key="item.id"
-              class="unclassified-row"
-              :class="{ 'unclassified-row--selected': activeSelectionId === item.id }"
-              @click="handleSelectionChange(item)"
-          >
-            <div>
-              <strong>{{ item.pageTitle }}</strong>
-              <span>{{ item.routePath || item.menuBinding?.componentPath || item.pageKey }}</span>
-            </div>
-            <span :class="['status-chip', `status-chip--${item.status}`]">
-              {{ statusLabel(item.status) }}
-            </span>
-          </div>
         </div>
       </aside>
 
@@ -101,11 +116,24 @@
             <div class="card-head">
               <div>
                 <h2 class="section-title">页面概览</h2>
-                <p class="section-sub">先确认页面归属，再设置搜索区和页面级风格开关。</p>
               </div>
-              <div class="card-head-meta">
-                <span class="mono-badge">{{ activeDraft.pageKey }}</span>
-                <span class="mono-badge mono-badge--soft">{{ activeDraft.routePath || '未绑定路由' }}</span>
+              <div class="overview-meta-rail">
+                <span class="overview-info-chip" :title="activeDraft.pageKey">
+                  <span>页面键</span>
+                  <strong>{{ activeDraft.pageKey }}</strong>
+                </span>
+                <span class="overview-info-chip" :title="activeDraft.routePath || '未绑定路由'">
+                  <span>路由</span>
+                  <strong>{{ activeDraft.routePath || '未绑定路由' }}</strong>
+                </span>
+                <span class="overview-info-chip" :title="formatComponentLabel(activeDraft.menuBinding?.componentPath)">
+                  <span>组件</span>
+                  <strong>{{ formatComponentLabel(activeDraft.menuBinding?.componentPath) }}</strong>
+                </span>
+                <span class="overview-info-chip overview-info-chip--wide" :title="activeMenuTrailText">
+                  <span>菜单</span>
+                  <strong>{{ activeMenuTrailText }}</strong>
+                </span>
               </div>
             </div>
 
@@ -115,41 +143,27 @@
               </div>
             </div>
 
-            <div class="overview-grid">
-              <label class="field-block">
-                <span>页面标题</span>
-                <a-input v-model:value="activeDraft.pageTitle"/>
-              </label>
-              <label class="field-block">
-                <span>页面键</span>
-                <a-input :value="activeDraft.pageKey" disabled/>
-              </label>
-              <label class="field-block">
-                <span>路由路径</span>
-                <a-input :value="activeDraft.routePath" disabled/>
-              </label>
-              <label class="field-block">
-                <span>组件路径</span>
-                <a-input :value="formatComponentLabel(activeDraft.menuBinding?.componentPath)" disabled/>
-              </label>
-              <label class="field-block field-block--full">
-                <span>菜单归属</span>
-                <a-input :value="activeMenuTrailText" disabled/>
-              </label>
-            </div>
+            <div class="overview-controls-row">
+              <div class="overview-grid overview-grid--title">
+                <label class="field-block field-block--title">
+                  <span>页面标题</span>
+                  <a-input v-model:value="activeDraft.pageTitle"/>
+                </label>
+              </div>
 
-            <div class="switch-strip">
-              <div class="switch-tile">
-                <span>启用页面配置</span>
-                <a-switch v-model:checked="activeDraft.enabled"/>
-              </div>
-              <div class="switch-tile">
-                <span>普通输入框跟随系统圆角</span>
-                <a-switch v-model:checked="activeDraft.formInputFollowSystemRadius"/>
-              </div>
-              <div class="switch-tile">
-                <span>启用快捷搜索</span>
-                <a-switch v-model:checked="quickSearchDraft.enabled"/>
+              <div class="switch-strip">
+                <div class="switch-tile">
+                  <span>启用页面配置</span>
+                  <a-switch v-model:checked="activeDraft.enabled"/>
+                </div>
+                <div class="switch-tile">
+                  <span>输入框跟随圆角</span>
+                  <a-switch v-model:checked="activeDraft.formInputFollowSystemRadius"/>
+                </div>
+                <div class="switch-tile">
+                  <span>启用快捷搜索</span>
+                  <a-switch v-model:checked="quickSearchDraft.enabled"/>
+                </div>
               </div>
             </div>
 
@@ -181,7 +195,6 @@
             <div class="card-head">
               <div>
                 <h2 class="section-title">配置目标</h2>
-                <p class="section-sub">一个页面可以同时包含主表格、多个 Modal 表单和搜索区。</p>
               </div>
             </div>
 
@@ -205,7 +218,6 @@
             <div class="card-head card-head--target">
               <div class="target-head-content">
                 <a-input v-model:value="activeTarget.title" class="target-title-input"/>
-                <p class="target-source-text">{{ activeTargetSourceText }}</p>
               </div>
               <div class="target-head-actions">
                 <span class="mono-badge">{{ targetTypeLabel(activeTarget.targetType) }}</span>
@@ -231,31 +243,20 @@
               </div>
             </div>
 
-            <div v-if="activeTarget.targetType === 'table'" class="target-body">
-              <div class="editor-hint">
-                横向预览的顺序就是运行态表格顺序。拖动列卡片可换序，拖右侧把手可改列宽。
-              </div>
-
+            <div v-if="activeTarget.targetType === 'table'" class="target-body target-body--table">
               <div class="table-header-preview">
                 <article
                     v-for="field in activeTargetFields"
                     :key="field.fieldKey"
                     class="table-header-cell"
                     :class="{ 'table-preview-card--hidden': !isFieldVisible(field) }"
-                    :style="tableCardStyle(field)"
                     draggable="true"
                     @dragstart="handleTableDragStart(field.fieldKey)"
                     @dragover.prevent
                     @drop="handleTableDrop(field.fieldKey)"
                 >
-                  <span class="drag-label">拖拽换序</span>
                   <strong>{{ field.label || field.fieldKey }}</strong>
                   <span class="field-key">{{ field.fieldKey }} · {{ field.columnWidth || 180 }}px</span>
-                  <button
-                      type="button"
-                      class="table-resize-handle"
-                      @mousedown.prevent="startColumnResize(field, $event)"
-                  />
                 </article>
               </div>
 
@@ -270,48 +271,46 @@
                     <strong>{{ field.label || field.fieldKey }}</strong>
                     <span>{{ field.fieldKey }}</span>
                   </div>
-                  <div class="field-config-controls">
-                    <label>
-                      <span>列宽</span>
-                      <a-input-number
-                          :value="field.columnWidth || 180"
-                          :min="96"
-                          :max="520"
-                          class="compact-number"
-                          @update:value="(value) => updateFieldWidth(field, value)"
-                      />
-                    </label>
-                    <label>
-                      <span>显示</span>
-                      <a-switch :checked="isFieldVisible(field)" size="small"
-                                @change="(checked) => toggleFieldVisible(field, Boolean(checked))"/>
-                    </label>
-                    <label>
-                      <span>筛选</span>
-                      <a-switch :checked="Boolean(field.filterEnabled)" size="small"
-                                @change="(checked) => (field.filterEnabled = Boolean(checked))"/>
-                    </label>
-                  </div>
-                  <div class="field-config-actions">
-                    <StandardButton type="text" size="sm" @click="moveField(activeTarget, field.fieldKey, -1)">前移
-                    </StandardButton>
-                    <StandardButton type="text" size="sm" @click="moveField(activeTarget, field.fieldKey, 1)">后移
-                    </StandardButton>
-                    <StandardButton type="link" size="sm" @click="openFieldModal(field)">编辑字段</StandardButton>
-                    <StandardButton type="link" size="sm" danger @click="handleRemoveField(field.fieldKey)">删除
-                    </StandardButton>
+                  <div class="field-config-operation">
+                    <div class="field-config-controls">
+                      <label>
+                        <span>列宽</span>
+                        <a-input-number
+                            :value="field.columnWidth || 180"
+                            :min="96"
+                            :max="520"
+                            class="compact-number"
+                            @update:value="(value) => updateFieldWidth(field, value)"
+                        />
+                      </label>
+                      <label>
+                        <span>显示</span>
+                        <a-switch :checked="isFieldVisible(field)" size="small"
+                                  @change="(checked) => toggleFieldVisible(field, Boolean(checked))"/>
+                      </label>
+                      <label>
+                        <span>筛选</span>
+                        <a-switch :checked="Boolean(field.filterEnabled)" size="small"
+                                  @change="(checked) => (field.filterEnabled = Boolean(checked))"/>
+                      </label>
+                    </div>
+                    <div class="field-config-actions">
+                      <StandardButton type="link" size="sm" @click="openFieldModal(field)">编辑字段</StandardButton>
+                      <StandardButton type="link" size="sm" danger @click="handleRemoveField(field.fieldKey)">删除
+                      </StandardButton>
+                    </div>
                   </div>
                 </article>
               </div>
             </div>
 
-            <div v-else class="target-body">
-              <div class="editor-hint">
-                这里直接按真实表单样式预览。拖进某一行会自动均分宽度，拖到行间会新起一行；同一行内也可以直接拖拽调整左右顺序，右下角把手负责调宽和调高。
-              </div>
+            <div v-else class="target-body target-body--form">
               <FormLayoutDesignerCanvas
-                  :title="activeTarget.title"
+                  :title="activeTarget.sourceSignature?.modalPreviewTitle || activeTarget.title"
                   :fields="activeTargetFields"
+                  :target-type="activeTarget.targetType"
+                  :modal-width="activeTarget.sourceSignature?.modalWidth"
+                  :modal-body-style="activeTarget.sourceSignature?.modalBodyStyle"
                   :layout-mode="activeTarget.sourceSignature?.formLayout || ''"
                   :form-class="activeTarget.sourceSignature?.formClass || ''"
                   :label-col-span="activeTarget.sourceSignature?.formLabelSpan"
@@ -683,6 +682,17 @@ interface MenuTreeRenderNode extends MenuTreeNode {
   children: MenuTreeRenderNode[];
 }
 
+interface AuxiliaryTreeRenderNode {
+  key: string;
+  title: string;
+  icon?: string;
+  nodeMeta?: string;
+  path?: string;
+  selection: PageSelection | null;
+  selectable: boolean;
+  children: AuxiliaryTreeRenderNode[];
+}
+
 const {loadMenuConfig} = usePageStyle();
 
 const controlTypeOptions = [
@@ -712,7 +722,6 @@ const targetTypeOptions = [
 const matchModeSelectOptions = buildMatchModeOptions();
 const FORM_GRID_COLUMNS = 24;
 const FORM_GRID_ROW_HEIGHT = 88;
-const TABLE_PREVIEW_MIN_WIDTH = 220;
 const FORM_LAYOUT_MIN_SPAN = 1;
 
 const menuIconMap: Record<string, any> = {
@@ -773,7 +782,6 @@ const guardDialog = reactive({
 });
 
 let guardResolver: ((decision: GuardDecision) => void) | null = null;
-let resizeCleanup: (() => void) | null = null;
 let canvasCleanup: (() => void) | null = null;
 
 const manifestPages = computed(() => {
@@ -812,24 +820,19 @@ const hasTreeSearch = computed(() => Boolean(treeSearchText.value.trim()));
 const renderMenuTree = computed(() => buildRenderMenuTree(filteredMenuTree.value));
 const allMenuSelections = computed(() => collectSelections(menuTree.value));
 const unclassifiedSelections = computed(() => buildUnclassifiedSelections(allMenuSelections.value));
+const auxiliaryTree = computed(() => buildAuxiliaryTree(allMenuSelections.value, unclassifiedSelections.value));
+const renderAuxiliaryTree = computed(() => filterAuxiliaryTree(auxiliaryTree.value, treeSearchText.value));
 const selectedMenuTreeKeys = computed(() => {
   const selectedId = activeSelectionId.value.startsWith('menu:') ? Number(activeSelectionId.value.replace('menu:', '')) : NaN;
   return Number.isFinite(selectedId) ? [selectedId] : [];
 });
+const selectedAuxiliaryTreeKeys = computed(() => (activeSelectionId.value ? [activeSelectionId.value] : []));
 const visibleExpandedTreeKeys = computed(() => (
     hasTreeSearch.value ? collectExpandableNodeKeys(renderMenuTree.value) : expandedNodeIds.value
 ));
-const filteredUnclassifiedSelections = computed(() => {
-  const keyword = normalizeText(treeSearchText.value);
-  if (!keyword) {
-    return unclassifiedSelections.value;
-  }
-  return unclassifiedSelections.value.filter((item) =>
-      [item.pageTitle, item.routePath, item.pageKey, item.menuBinding?.componentPath]
-          .filter(Boolean)
-          .some((value) => normalizeText(value).includes(keyword))
-  );
-});
+const visibleAuxiliaryExpandedTreeKeys = computed(() => (
+    hasTreeSearch.value ? collectAuxiliaryExpandableNodeKeys(renderAuxiliaryTree.value) : expandedAuxiliaryNodeIds.value
+));
 
 const activeManifest = computed(() => {
   if (!activeDraft.value) {
@@ -924,21 +927,6 @@ const activeTargetIssues = computed(() => {
   });
 
   return Array.from(issues);
-});
-
-const activeTargetSourceText = computed(() => {
-  const target = activeTarget.value;
-  if (!target) {
-    return '未选择目标';
-  }
-  const signature = target.sourceSignature || {};
-  const pieces = [
-    signature.titleCandidate,
-    signature.columnsBinding ? `列源 ${signature.columnsBinding}` : '',
-    signature.modalBinding ? `Modal ${signature.modalBinding}` : '',
-    signature.componentPath ? formatComponentLabel(signature.componentPath) : '',
-  ].filter(Boolean);
-  return pieces.length ? pieces.join(' · ') : '可直接在此预览顺序、显隐和布局。';
 });
 
 const formCanvasStyle = computed(() => ({}));
@@ -1044,6 +1032,26 @@ watch(
 );
 
 watch(
+    () => [activeDraft.value, activeManifest.value] as const,
+    ([draft, manifest]) => {
+      if (!draft || !manifest) {
+        return;
+      }
+      const normalized = normalizePageConfig(clonePageConfig(draft), manifest);
+      if (serializeDraft(normalized) === serializeDraft(draft)) {
+        return;
+      }
+
+      const selectedTargetKey = activeTargetKey.value;
+      activeDraft.value = normalized;
+      if (selectedTargetKey && normalized.targets?.some((target) => target.targetKey === selectedTargetKey)) {
+        activeTargetKey.value = selectedTargetKey;
+      }
+    },
+    {immediate: true}
+);
+
+watch(
     () => targetDraft.title,
     (value) => {
       if (!targetModalVisible.value) {
@@ -1061,7 +1069,6 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  resizeCleanup?.();
   canvasCleanup?.();
 });
 
@@ -1301,6 +1308,7 @@ function filterMenuTree(nodes: MenuTreeNode[], keyword: string) {
 }
 
 const expandedNodeIds = ref<number[]>([]);
+const expandedAuxiliaryNodeIds = ref<string[]>([]);
 
 function buildRenderMenuTree(nodes: MenuTreeNode[]): MenuTreeRenderNode[] {
   return nodes.map((node) => ({
@@ -1309,6 +1317,62 @@ function buildRenderMenuTree(nodes: MenuTreeNode[]): MenuTreeRenderNode[] {
     selectable: Boolean(node.selection),
     children: buildRenderMenuTree(node.children),
   }));
+}
+
+function buildAuxiliaryTree(
+    menuSelections: PageSelection[],
+    unclassifiedItems: PageSelection[]
+): AuxiliaryTreeRenderNode[] {
+  const allSelections = uniqueSelections([...menuSelections, ...unclassifiedItems]);
+  const groups = [
+    {
+      key: 'aux:issue',
+      title: '检测异常',
+      icon: 'WarningOutlined',
+      selections: allSelections.filter((item) => item.status === 'issue'),
+    },
+    {
+      key: 'aux:unconfigured',
+      title: '未配置页面',
+      icon: 'FormOutlined',
+      selections: allSelections.filter((item) => item.status === 'unconfigured'),
+    },
+    {
+      key: 'aux:unclassified',
+      title: '未归类页面',
+      icon: 'FolderOpenOutlined',
+      selections: unclassifiedItems.filter((item) => item.status === 'configured'),
+    },
+  ];
+
+  return groups
+      .filter((group) => group.selections.length)
+      .map((group) => ({
+        key: group.key,
+        title: group.title,
+        icon: group.icon,
+        nodeMeta: `${group.selections.length} 个页面`,
+        selection: null,
+        selectable: false,
+        children: group.selections.map((selection) => ({
+          key: selection.id,
+          title: selection.pageTitle,
+          path: selection.routePath,
+          selection,
+          selectable: true,
+          children: [],
+        })),
+      }));
+}
+
+function uniqueSelections(selections: PageSelection[]) {
+  const result = new Map<string, PageSelection>();
+  selections.forEach((selection) => {
+    if (!result.has(selection.id)) {
+      result.set(selection.id, selection);
+    }
+  });
+  return Array.from(result.values());
 }
 
 function collectExpandableNodeKeys(nodes: MenuTreeRenderNode[]): number[] {
@@ -1322,7 +1386,59 @@ function collectExpandableNodeKeys(nodes: MenuTreeRenderNode[]): number[] {
   return keys;
 }
 
+function collectAuxiliaryExpandableNodeKeys(nodes: AuxiliaryTreeRenderNode[]): string[] {
+  const keys: string[] = [];
+  nodes.forEach((node) => {
+    if (node.children.length) {
+      keys.push(node.key);
+      keys.push(...collectAuxiliaryExpandableNodeKeys(node.children));
+    }
+  });
+  return keys;
+}
+
+function filterAuxiliaryTree(nodes: AuxiliaryTreeRenderNode[], keyword: string): AuxiliaryTreeRenderNode[] {
+  const normalized = normalizeText(keyword);
+  if (!normalized) {
+    return nodes;
+  }
+
+  return nodes
+      .map((node) => {
+        const selfMatched = auxiliaryNodeMatches(node, normalized);
+        const matchedChildren = filterAuxiliaryTree(node.children, keyword);
+        if (!selfMatched && !matchedChildren.length) {
+          return null;
+        }
+        return {
+          ...node,
+          children: selfMatched ? node.children : matchedChildren,
+        };
+      })
+      .filter((node): node is AuxiliaryTreeRenderNode => Boolean(node));
+}
+
+function auxiliaryNodeMatches(node: AuxiliaryTreeRenderNode, keyword: string) {
+  return [
+    node.title,
+    node.nodeMeta,
+    node.path,
+    node.selection?.pageTitle,
+    node.selection?.routePath,
+    node.selection?.pageKey,
+    node.selection?.menuBinding?.componentPath,
+  ]
+      .filter(Boolean)
+      .some((value) => normalizeText(value).includes(keyword));
+}
+
 async function handleTreeSelect(_selectedKeys: (string | number)[], info: { node: MenuTreeRenderNode }) {
+  if (info.node?.selection) {
+    await handleSelectionChange(info.node.selection);
+  }
+}
+
+async function handleAuxiliaryTreeSelect(_selectedKeys: (string | number)[], info: { node: AuxiliaryTreeRenderNode }) {
   if (info.node?.selection) {
     await handleSelectionChange(info.node.selection);
   }
@@ -1335,6 +1451,13 @@ function handleTreeExpand(keys: (string | number)[]) {
   expandedNodeIds.value = keys
       .map((key) => Number(key))
       .filter((key) => Number.isFinite(key));
+}
+
+function handleAuxiliaryTreeExpand(keys: (string | number)[]) {
+  if (hasTreeSearch.value) {
+    return;
+  }
+  expandedAuxiliaryNodeIds.value = keys.map((key) => String(key));
 }
 
 function statusLabel(status: SelectionStatus) {
@@ -1354,7 +1477,10 @@ function resolveTreeIcon(node: { icon?: string; selection?: PageSelection | null
   return node.selection ? FormOutlined : FolderOpenOutlined;
 }
 
-function treeNodeMeta(node: { selection?: PageSelection | null; path?: string; children?: unknown[] }) {
+function treeNodeMeta(node: { nodeMeta?: string; selection?: PageSelection | null; path?: string; children?: unknown[] }) {
+  if (node.nodeMeta) {
+    return node.nodeMeta;
+  }
   if (node.selection) {
     return `页面 · ${node.selection.routePath || node.path || node.selection.pageKey}`;
   }
@@ -1575,13 +1701,6 @@ function updateFieldWidth(field: FormFieldConfig, width: number | null) {
   field.columnWidth = clampNumber(Number(width ?? 180), 96, 520);
 }
 
-function tableCardStyle(field: FormFieldConfig) {
-  return {
-    width: `${Math.max(field.columnWidth || 180, TABLE_PREVIEW_MIN_WIDTH)}px`,
-    minWidth: `${TABLE_PREVIEW_MIN_WIDTH}px`,
-  };
-}
-
 function ensureFieldLayout(field: FormFieldConfig, index: number): FormFieldLayout {
   if (!field.layout) {
     field.layout = {
@@ -1631,21 +1750,6 @@ function handleTableDrop(targetFieldKey: string) {
   tableDragFieldKey.value = '';
 }
 
-function moveField(target: FormConfigTarget, fieldKey: string, offset: number) {
-  const ordered = sortTargetFields(target.fields || [], target.targetType);
-  const index = ordered.findIndex((field) => field.fieldKey === fieldKey);
-  if (index < 0) {
-    return;
-  }
-  const nextIndex = clampNumber(index + offset, 0, ordered.length - 1);
-  if (nextIndex === index) {
-    return;
-  }
-  const [moved] = ordered.splice(index, 1);
-  ordered.splice(nextIndex, 0, moved);
-  writeTargetFieldOrder(target, ordered);
-}
-
 function reorderTargetFields(target: FormConfigTarget, draggedKey: string, targetKey: string) {
   const ordered = sortTargetFields(target.fields || [], target.targetType);
   const fromIndex = ordered.findIndex((field) => field.fieldKey === draggedKey);
@@ -1664,26 +1768,6 @@ function writeTargetFieldOrder(target: FormConfigTarget, orderedFields: FormFiel
     field.columnOrder = index;
   });
   target.fields = [...orderedFields];
-}
-
-function startColumnResize(field: FormFieldConfig, event: MouseEvent) {
-  resizeCleanup?.();
-  const startX = event.clientX;
-  const startWidth = field.columnWidth || 180;
-
-  const handleMove = (moveEvent: MouseEvent) => {
-    field.columnWidth = clampNumber(startWidth + moveEvent.clientX - startX, 96, 520);
-  };
-
-  const handleUp = () => {
-    window.removeEventListener('mousemove', handleMove);
-    window.removeEventListener('mouseup', handleUp);
-    resizeCleanup = null;
-  };
-
-  window.addEventListener('mousemove', handleMove);
-  window.addEventListener('mouseup', handleUp);
-  resizeCleanup = handleUp;
 }
 
 function startCanvasInteraction(field: FormFieldConfig, mode: 'move' | 'resize', event: PointerEvent) {
@@ -2003,6 +2087,7 @@ async function handleSavePage() {
     savedSnapshot.value = serializeDraft(normalizedSaved);
     savedConfigs.value = (await fetchFormConfigPages()).map((config) => normalizePageConfig(config, resolveManifestForConfig(config)));
     sourceFields.value = await safeFetchSourceFields(normalizedSaved.pageKey);
+    notifyRuntimeConfigChanged(normalizedSaved);
     message.success('配置已保存并立即生效');
     return true;
   } catch (error) {
@@ -2011,6 +2096,19 @@ async function handleSavePage() {
   } finally {
     savingPage.value = false;
   }
+}
+
+function notifyRuntimeConfigChanged(config: FormPageConfig) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const payload = {
+    pageKey: config.pageKey,
+    routePath: config.routePath,
+    updatedAt: Date.now(),
+  };
+  window.dispatchEvent(new CustomEvent('gms-form-config-runtime-updated', { detail: payload }));
+  window.localStorage.setItem('gms-form-config-runtime-updated', JSON.stringify(payload));
 }
 
 function validatePageDraft(config: FormPageConfig) {
@@ -2140,16 +2238,45 @@ function clampNumber(value: number, min: number, max: number) {
 <style scoped>
 .designer-shell {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  align-items: stretch;
   gap: 28px;
-  min-height: calc(100vh - 220px);
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.form-config-workspace {
+  height: 100%;
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.form-config-workspace :deep(.workspace-header) {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.form-config-workspace :deep(.workspace-body) {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding-top: 24px;
 }
 
 .designer-sidebar,
 .designer-card,
 .designer-empty,
-.tree-panel,
-.unclassified-panel {
+.tree-panel {
   border: 1px solid var(--mono-line);
   border-radius: var(--mono-radius-sm);
   background: #ffffff;
@@ -2157,26 +2284,42 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 .designer-sidebar {
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   padding: 0 24px 0 0;
   border: none;
   border-right: 1px solid var(--mono-line);
   border-radius: 0;
+  overflow: hidden;
 }
 
 .designer-main {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .designer-card,
 .designer-empty,
-.tree-panel,
-.unclassified-panel {
+.tree-panel {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   padding: 0;
   border: none;
   border-radius: 0;
@@ -2191,12 +2334,7 @@ function clampNumber(value: number, min: number, max: number) {
   line-height: 1.15;
 }
 
-.section-sub,
-.sidebar-subhead span,
-.editor-hint,
-.target-source-text,
 .tree-row-content span:not(.tree-row-title),
-.unclassified-row span,
 .field-modal-head span,
 .guard-message {
   color: var(--mono-text-secondary);
@@ -2219,36 +2357,38 @@ function clampNumber(value: number, min: number, max: number) {
 
 .tree-panel {
   flex: 1 1 auto;
-  overflow: auto;
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px 0 0;
+  scrollbar-gutter: stable;
 }
 
-.tree-row,
-.unclassified-row {
+.tree-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  min-height: 44px;
-  padding: 6px 10px;
+  min-height: 40px;
+  padding: 0 8px 0 6px;
   border: 1px solid transparent;
-  border-radius: var(--mono-radius-sm);
+  border-radius: 10px;
   background: transparent;
-  color: var(--mono-text);
+  color: #4b5563;
   text-align: left;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.tree-row--selectable:hover,
-.unclassified-row:hover {
-  border-color: rgba(17, 17, 17, 0.05);
+.tree-row--selectable:hover {
   background: rgba(17, 17, 17, 0.02);
+  color: #454c55;
 }
 
-.tree-row--selected,
-.unclassified-row--selected {
-  border-color: rgba(17, 17, 17, 0.04);
+.tree-row--selected {
   background: rgba(17, 17, 17, 0.03);
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.04);
 }
 
 .tree-row--selectable {
@@ -2326,6 +2466,12 @@ function clampNumber(value: number, min: number, max: number) {
   border-color: #e5e7eb;
 }
 
+.tree-section-divider {
+  height: 1px;
+  margin: 12px 8px;
+  background: rgba(17, 17, 17, 0.1);
+}
+
 .tree-switcher-icon {
   display: inline-flex;
   align-items: center;
@@ -2367,8 +2513,7 @@ function clampNumber(value: number, min: number, max: number) {
   font-size: 14px;
 }
 
-.tree-row-content,
-.unclassified-row > div {
+.tree-row-content {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -2376,8 +2521,7 @@ function clampNumber(value: number, min: number, max: number) {
   flex: 1 1 auto;
 }
 
-.tree-row-title,
-.unclassified-row strong {
+.tree-row-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2406,6 +2550,7 @@ function clampNumber(value: number, min: number, max: number) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   height: 22px;
   padding: 0 8px;
   border: 1px solid var(--mono-line-strong);
@@ -2417,6 +2562,7 @@ function clampNumber(value: number, min: number, max: number) {
   white-space: nowrap;
   vertical-align: middle;
   box-sizing: border-box;
+  flex: 0 0 auto;
 }
 
 .empty-hint {
@@ -2433,9 +2579,9 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 .status-chip--configured {
-  border-color: #111111;
-  background: #111111;
-  color: #ffffff;
+  border-color: rgba(17, 17, 17, 0.12);
+  background: rgba(17, 17, 17, 0.06);
+  color: #4b5563;
 }
 
 .status-chip--unconfigured,
@@ -2444,11 +2590,22 @@ function clampNumber(value: number, min: number, max: number) {
   color: var(--mono-text);
 }
 
-.status-chip--issue,
+.status-chip--issue {
+  border-color: rgba(17, 17, 17, 0.12);
+  background: rgba(17, 17, 17, 0.06);
+  color: #4b5563;
+}
+
 .issue-item {
-  border-color: rgba(17, 17, 17, 0.18);
+  border-color: rgba(17, 17, 17, 0.12);
   background: rgba(17, 17, 17, 0.04);
   color: #111111;
+}
+
+.status-chip-icon {
+  font-size: 11px;
+  line-height: 1;
+  color: #6b7280;
 }
 
 .draft-banner {
@@ -2464,13 +2621,55 @@ function clampNumber(value: number, min: number, max: number) {
   font-weight: 600;
 }
 
-.card-head-meta,
 .switch-strip,
 .target-head-actions {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.overview-meta-rail {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  max-width: calc(100% - 120px);
+  margin-left: auto;
+}
+
+.overview-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 240px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  border-radius: var(--mono-radius-pill);
+  background: #ffffff;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.overview-info-chip--wide {
+  max-width: 360px;
+}
+
+.overview-info-chip span {
+  color: var(--mono-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.overview-info-chip strong {
+  overflow: hidden;
+  color: var(--mono-text);
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
 }
 
 .overview-grid,
@@ -2484,6 +2683,19 @@ function clampNumber(value: number, min: number, max: number) {
   margin-top: 18px;
 }
 
+.overview-controls-row {
+  display: grid;
+  grid-template-columns: minmax(360px, 620px) minmax(0, 1fr);
+  align-items: end;
+  gap: 24px;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.overview-grid--title {
+  margin-top: 0;
+}
+
 .field-block {
   display: flex;
   flex-direction: column;
@@ -2493,6 +2705,18 @@ function clampNumber(value: number, min: number, max: number) {
 
 .field-block--wide {
   grid-column: span 5;
+}
+
+.field-block--title {
+  grid-column: 1 / -1;
+  max-width: none;
+}
+
+.field-block--title :deep(.ant-input) {
+  height: 44px;
+  padding: 0 16px;
+  font-size: 16px;
+  line-height: 44px;
 }
 
 .field-block--full {
@@ -2509,6 +2733,16 @@ function clampNumber(value: number, min: number, max: number) {
   margin-top: 18px;
 }
 
+.overview-card .switch-strip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 24px;
+  width: 100%;
+  margin-top: 0;
+  padding: 0;
+}
+
 .switch-tile {
   display: flex;
   align-items: center;
@@ -2521,11 +2755,46 @@ function clampNumber(value: number, min: number, max: number) {
   background: #ffffff;
 }
 
+.overview-card .switch-tile {
+  justify-content: flex-start;
+  gap: 12px;
+  width: auto;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
 .switch-tile span,
 .target-toggle span {
   color: var(--mono-text);
   font-size: 13px;
   font-weight: 600;
+}
+
+.overview-card .switch-tile span {
+  white-space: nowrap;
+}
+
+.overview-card .overview-grid--search {
+  grid-template-columns: minmax(190px, 260px) minmax(360px, 1fr);
+  width: 100%;
+  max-width: none;
+  margin-top: 24px;
+  align-items: start;
+  column-gap: 24px;
+}
+
+.overview-card .overview-grid--search .field-block,
+.overview-card .overview-grid--search .field-block--wide {
+  grid-column: auto;
+}
+
+.overview-card .overview-grid--search .field-block--full {
+  grid-column: 1 / -1;
+  max-width: none;
 }
 
 .issue-stack {
@@ -2548,6 +2817,18 @@ function clampNumber(value: number, min: number, max: number) {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 18px;
+}
+
+.overview-card,
+.target-nav-card {
+  flex: 0 0 auto;
+}
+
+.target-editor-card {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .target-tab {
@@ -2602,41 +2883,48 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 .target-body {
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
   margin-top: 18px;
 }
 
-.table-preview-track {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  margin-top: 16px;
+.target-body--table {
+  overflow: visible;
+}
+
+.target-body--form {
+  overflow: visible;
 }
 
 .table-header-preview {
-  display: flex;
-  gap: 0;
-  overflow-x: auto;
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  overflow: visible;
+  min-width: 0;
+  max-width: 100%;
   margin-top: 16px;
-  border: 1px solid var(--mono-line);
-  border-radius: var(--mono-radius-sm);
-  background: #ffffff;
+  background: transparent;
 }
 
 .table-header-cell {
   position: relative;
-  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 88px;
-  padding: 14px 32px 14px 14px;
-  border-right: 1px solid var(--mono-line);
+  min-width: 0;
+  min-height: 76px;
+  padding: 14px;
+  border: 1px solid var(--mono-line);
+  border-radius: var(--mono-radius-sm);
   background: #ffffff;
+  cursor: grab;
 }
 
-.table-header-cell:last-child {
-  border-right: none;
+.table-header-cell:active {
+  cursor: grabbing;
 }
 
 .table-header-cell strong,
@@ -2647,19 +2935,22 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 .field-config-list {
+  max-width: 100%;
   margin-top: 14px;
   border: 1px solid var(--mono-line);
   border-radius: var(--mono-radius-sm);
   background: #ffffff;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .field-config-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(340px, auto) auto;
+  grid-template-columns: minmax(180px, 1fr) auto;
   gap: 16px;
   align-items: center;
-  padding: 14px 16px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--mono-line);
 }
 
@@ -2690,12 +2981,32 @@ function clampNumber(value: number, min: number, max: number) {
   font-size: 12px;
 }
 
+.field-config-operation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
 .field-config-controls,
 .field-config-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.field-config-controls {
+  justify-content: flex-end;
+}
+
+.field-config-actions {
+  justify-content: flex-start;
+  white-space: nowrap;
 }
 
 .field-config-controls label {
@@ -2730,10 +3041,6 @@ function clampNumber(value: number, min: number, max: number) {
   border-style: dashed;
 }
 
-.table-preview-top,
-.table-preview-main,
-.table-preview-controls,
-.table-preview-actions,
 .form-block-head,
 .form-block-body,
 .form-block-actions,
@@ -2743,53 +3050,13 @@ function clampNumber(value: number, min: number, max: number) {
   gap: 10px;
 }
 
-.table-preview-top,
 .form-block-body {
   justify-content: space-between;
 }
 
-.drag-label,
 .field-key {
   color: var(--mono-text-secondary);
   font-size: 12px;
-}
-
-.table-preview-main {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.table-preview-controls {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-}
-
-.table-preview-controls label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--mono-text-secondary);
-  font-size: 12px;
-}
-
-.table-preview-actions {
-  margin-top: auto;
-  flex-wrap: wrap;
-}
-
-.table-resize-handle {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 12px;
-  height: 100%;
-  border: none;
-  border-radius: 0 var(--mono-radius-sm) var(--mono-radius-sm) 0;
-  background: linear-gradient(180deg, rgba(17, 17, 17, 0), rgba(17, 17, 17, 0.14), rgba(17, 17, 17, 0));
-  cursor: col-resize;
 }
 
 .form-canvas {
@@ -2910,6 +3177,12 @@ function clampNumber(value: number, min: number, max: number) {
   font-size: 14px;
 }
 
+:deep(.workspace-shell),
+:deep(.workspace-body) {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 .field-modal-layout {
   display: flex;
   flex-direction: column;
@@ -2973,16 +3246,25 @@ function clampNumber(value: number, min: number, max: number) {
   width: 100%;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 960px) {
   .designer-shell {
     grid-template-columns: 1fr;
+    overflow-y: auto;
   }
 
   .designer-sidebar {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
     padding-right: 0;
     padding-bottom: 24px;
     border-right: none;
     border-bottom: 1px solid var(--mono-line);
+  }
+
+  .tree-panel {
+    flex: 0 0 auto;
+    max-height: 360px;
   }
 
   .overview-grid,
@@ -2995,8 +3277,25 @@ function clampNumber(value: number, min: number, max: number) {
   }
 
   .field-block--wide,
+  .field-block--title,
   .field-block--full {
     grid-column: 1 / -1;
+  }
+
+  .overview-meta-rail {
+    max-width: 100%;
+  }
+
+  .overview-card .switch-strip,
+  .overview-controls-row,
+  .overview-card .overview-grid--search {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-card .switch-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
 
@@ -3004,8 +3303,7 @@ function clampNumber(value: number, min: number, max: number) {
   .designer-sidebar,
   .designer-card,
   .designer-empty,
-  .tree-panel,
-  .unclassified-panel {
+  .tree-panel {
     padding: 0;
   }
 
@@ -3016,6 +3314,7 @@ function clampNumber(value: number, min: number, max: number) {
 
   .field-block,
   .field-block--wide,
+  .field-block--title,
   .field-block--full {
     grid-column: 1 / -1;
   }
@@ -3031,6 +3330,11 @@ function clampNumber(value: number, min: number, max: number) {
     align-items: stretch;
   }
 
+  .overview-meta-rail {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
   .target-head-actions,
   .guard-footer {
     justify-content: flex-start;
@@ -3038,6 +3342,10 @@ function clampNumber(value: number, min: number, max: number) {
 
   .field-config-row {
     grid-template-columns: 1fr;
+  }
+
+  .field-config-operation {
+    justify-content: flex-start;
   }
 
   .field-config-controls,
@@ -3048,5 +3356,162 @@ function clampNumber(value: number, min: number, max: number) {
   .form-canvas {
     grid-template-columns: 1fr;
   }
+}
+</style>
+
+<style>
+html.dark .form-config-workspace,
+html.dark .form-config-workspace .designer-shell {
+  background: transparent;
+  color: var(--mono-text);
+}
+
+html.dark .form-config-workspace .designer-sidebar {
+  background: transparent !important;
+  border-right-color: var(--mono-line) !important;
+}
+
+html.dark .form-config-workspace .designer-card,
+html.dark .form-config-workspace .designer-empty,
+html.dark .form-config-workspace .tree-panel {
+  background: transparent !important;
+  border-color: var(--mono-line) !important;
+  color: var(--mono-text);
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-list,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-list-holder,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-list-holder-inner,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-treenode,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper {
+  background: transparent !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper,
+html.dark .form-config-workspace .tree-row {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper:hover,
+html.dark .form-config-workspace .tree-row--selectable:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--mono-text) !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected,
+html.dark .form-config-workspace .tree-row--selected {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--mono-text) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected .tree-row-title,
+html.dark .form-config-workspace .tree-row-title {
+  color: var(--mono-text) !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected .tree-row-content span:not(.tree-row-title),
+html.dark .form-config-workspace .tree-row-content span:not(.tree-row-title) {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected .tree-node-icon,
+html.dark .form-config-workspace .tree-node-icon,
+html.dark .form-config-workspace .tree-switcher-icon,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree .ant-tree-switcher {
+  color: var(--mono-text-tertiary) !important;
+}
+
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree.ant-tree-show-line .ant-tree-indent-unit::before,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree.ant-tree-show-line .ant-tree-switcher-leaf-line::before,
+html.dark .form-config-workspace .tree-panel .tree-menu.ant-tree.ant-tree-show-line .ant-tree-switcher-leaf-line::after {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+html.dark .form-config-workspace .tree-section-divider {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+html.dark .form-config-workspace .status-chip,
+html.dark .form-config-workspace .mono-badge,
+html.dark .form-config-workspace .overview-info-chip,
+html.dark .form-config-workspace .switch-tile,
+html.dark .form-config-workspace .target-tab,
+html.dark .form-config-workspace .table-header-cell,
+html.dark .form-config-workspace .field-config-list,
+html.dark .form-config-workspace .table-preview-card,
+html.dark .form-config-workspace .form-canvas,
+html.dark .form-config-workspace .form-block,
+html.dark .form-config-workspace .form-block-body span,
+html.dark .form-config-workspace .mini-action {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--mono-text) !important;
+  box-shadow: none !important;
+}
+
+html.dark .form-config-workspace .target-tab:hover,
+html.dark .form-config-workspace .table-header-cell:hover,
+html.dark .form-config-workspace .mini-action:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+html.dark .form-config-workspace .overview-card .switch-tile {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+html.dark .form-config-workspace .target-tab--active {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+html.dark .form-config-workspace .overview-info-chip span,
+html.dark .form-config-workspace .target-tab span,
+html.dark .form-config-workspace .target-tab small,
+html.dark .form-config-workspace .field-key,
+html.dark .form-config-workspace .field-config-title span,
+html.dark .form-config-workspace .form-block-title span,
+html.dark .form-config-workspace .form-block-body span,
+html.dark .form-config-workspace .field-config-controls label,
+html.dark .form-config-workspace .field-block span,
+html.dark .form-config-workspace .field-modal-head span,
+html.dark .form-config-workspace .guard-message {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .form-config-workspace .overview-info-chip strong,
+html.dark .form-config-workspace .target-tab strong,
+html.dark .form-config-workspace .field-config-title strong,
+html.dark .form-config-workspace .field-modal-head strong,
+html.dark .form-config-workspace .field-modal-section h3,
+html.dark .form-config-workspace .switch-tile span,
+html.dark .form-config-workspace .target-toggle span {
+  color: var(--mono-text) !important;
+}
+
+html.dark .form-config-workspace .field-config-row {
+  border-bottom-color: var(--mono-line) !important;
+}
+
+html.dark .form-config-workspace .status-chip--configured,
+html.dark .form-config-workspace .status-chip--unconfigured,
+html.dark .form-config-workspace .status-chip--issue,
+html.dark .form-config-workspace .mono-badge--soft,
+html.dark .form-config-workspace .issue-item,
+html.dark .form-config-workspace .draft-banner,
+html.dark .form-config-workspace .source-panel {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.11) !important;
+  color: var(--mono-text) !important;
+}
+
+html.dark .form-config-workspace .status-chip-icon {
+  color: var(--mono-text-secondary) !important;
 }
 </style>

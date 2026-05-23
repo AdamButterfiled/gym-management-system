@@ -33,6 +33,9 @@
               {{ repairStatusLabel(record.status) }}
             </span>
           </template>
+          <template v-if="column.key === 'createdAt'">
+            {{ formatDateTime(record.createdAt) }}
+          </template>
           <template v-if="column.key === 'action'">
             <template v-if="nextRepairAction(record.status)">
               <StandardButton
@@ -54,6 +57,7 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted } from 'vue';
+import dayjs from 'dayjs';
 import { message } from 'ant-design-vue';
 import request from '@/request';
 import { PageResult, Repair } from '@/types';
@@ -63,6 +67,7 @@ import type { FormPageConfig } from '@/types/formConfig';
 import { buildConfiguredColumns } from '@/utils/formConfig';
 import { findFormConfigManifestPage } from '@/utils/formConfigManifest';
 import { normalizePageConfig, resolveTableTarget } from '@/utils/formConfigDesigner';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 // Shared Components
 import StandardButton from '@/components/common/StandardButton.vue';
@@ -93,14 +98,24 @@ const pagination = reactive({
 });
 
 const baseColumns = [
-  { title: '序号', dataIndex: 'id', key: 'id', width: 80 },
   { title: '报修描述', dataIndex: 'description', key: 'description' },
   { title: '状态', dataIndex: 'status', key: 'status' }, 
   { title: '报修时间', dataIndex: 'createdAt', key: 'createdAt' },
+  { title: '序号', dataIndex: 'id', key: 'id', width: 80 },
   { title: '操作', key: 'action', width: 150 },
 ];
 const tableFields = computed(() => resolveTableTarget(runtimeConfig.value)?.fields || []);
-const columns = computed(() => buildConfiguredColumns(baseColumns, tableFields.value));
+const repairColumnPriority = ['description', 'status', 'createdAt', 'id', 'action'];
+const columns = computed(() => sortColumnsByPriority(buildConfiguredColumns(baseColumns, tableFields.value), repairColumnPriority));
+
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : value.replace('T', ' ');
+};
 
 const loadRuntimeConfig = async () => {
   const manifest = findFormConfigManifestPage('/repair');

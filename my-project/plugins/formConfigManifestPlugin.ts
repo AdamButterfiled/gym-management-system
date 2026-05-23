@@ -231,15 +231,18 @@ function readModals(templateContent: string, headings: Array<{ index: number; ti
   while ((match = pattern.exec(templateContent))) {
     const attrs = match[1] || '';
     const body = match[2] || '';
+    const boundTitle = readBoundAttr(attrs, ':title');
     const title =
       readStaticAttr(attrs, 'title') ||
-      humanizeBinding(readBoundAttr(attrs, 'title')) ||
+      boundTitle ||
       closestHeading(headings, match.index || 0) ||
       `表单 ${modalIndex + 1}`;
-    const visibleBinding = readBoundAttr(attrs, 'v-model:visible') || readBoundAttr(attrs, 'visible') || '';
+    const previewTitle = boundTitle ? readRefString(scriptContent, boundTitle) || title : title;
+    const visibleBinding = readBoundAttr(attrs, 'v-model:visible') || readBoundAttr(attrs, ':visible') || '';
     const targetKey = deriveModalTargetKey(visibleBinding, title, modalIndex);
     const fields = readFormFields(body, scriptContent);
     const formSignature = readFormSignature(body);
+    const modalSignature = readModalSignature(attrs);
     modals.push({
       targetKey,
       targetType: 'modal-form',
@@ -247,11 +250,15 @@ function readModals(templateContent: string, headings: Array<{ index: number; ti
       order: 100 + modalIndex,
       sourceSignature: {
         modalBinding: visibleBinding,
-        modalTitleBinding: readBoundAttr(attrs, 'title') || '',
+        modalTitleBinding: boundTitle,
+        modalPreviewTitle: previewTitle,
+        modalWidth: modalSignature.width,
+        modalBodyStyle: modalSignature.bodyStyle,
         formLayout: formSignature.layout,
         formClass: formSignature.formClass,
         formLabelSpan: formSignature.labelSpan,
         formWrapperSpan: formSignature.wrapperSpan,
+        formLayoutSource: detectFormLayoutSource(body),
         titleCandidate: title,
         detectedBy: 'build-scan',
       },
@@ -315,6 +322,16 @@ function readFormFields(body: string, scriptContent = ''): TargetFieldRecord[] {
   return fields;
 }
 
+function detectFormLayoutSource(body: string) {
+  if (/<ConfiguredFormLayout\b/.test(body)) {
+    return 'configured-layout';
+  }
+  if (/<a-row\b[\s\S]*?<a-col\b/.test(body)) {
+    return 'row-col-form';
+  }
+  return 'native-form';
+}
+
 function readConfiguredFormLayoutFields(source: string, scriptContent = ''): TargetFieldRecord[] {
   const fields: TargetFieldRecord[] = [];
   const slotBlocks = [...source.matchAll(/<template\s+#field-([A-Za-z0-9_]+)[^>]*>([\s\S]*?)<\/template>/g)];
@@ -333,18 +350,18 @@ function readConfiguredFormLayoutFields(source: string, scriptContent = ''): Tar
 }
 
 function readSingleFormItem(source: string, preferredFieldKey = '', scriptContent = ''): TargetFieldRecord | null {
-  const keyMatch =
-    (preferredFieldKey ? [preferredFieldKey] : null) ||
-    source.match(/data-field-key="([^"]+)"/) ||
-    source.match(/isFieldVisible\('([^']+)'\)/) ||
-    source.match(/v-model(?::[a-zA-Z-]+)?="[^"]+\.([A-Za-z0-9_]+)"/) ||
-    source.match(/v-model(?::[a-zA-Z-]+)?="([A-Za-z0-9_]+)"/);
+  const fieldKey =
+    preferredFieldKey ||
+    source.match(/data-field-key="([^"]+)"/)?.[1] ||
+    source.match(/isFieldVisible\('([^']+)'\)/)?.[1] ||
+    source.match(/v-model(?::[a-zA-Z-]+)?="[^"]+\.([A-Za-z0-9_]+)"/)?.[1] ||
+    source.match(/v-model(?::[a-zA-Z-]+)?="([A-Za-z0-9_]+)"/)?.[1] ||
+    '';
   const labelMatch = source.match(/label="([^"]+)"/);
   const placeholderMatch = source.match(/placeholder="([^"]+)"/);
-  if (!keyMatch) {
+  if (!fieldKey) {
     return null;
   }
-  const fieldKey = keyMatch[1];
   const label = labelMatch?.[1] || humanizeName(fieldKey);
   const lowerSource = source.toLowerCase();
   let controlType = 'text';
@@ -575,6 +592,56 @@ function readFormSignature(body: string) {
   };
 }
 
+function readModalSignature(attrs: string) {
+  return {
+    width: readStaticAttr(attrs, 'width') || readBoundAttr(attrs, ':width') || '',
+    bodyStyle: readStyleObjectText(readBoundAttr(attrs, ':body-style') || readStaticAttr(attrs, 'body-style')),
+  };
+}
+
+function readRefString(scriptContent: string, variableName: string) {
+  if (!variableName || !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(variableName)) {
+    return '';
+  }
+  const escaped = variableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const refMatch = scriptContent.match(new RegExp(`const\\s+${escaped}\\s*=\\s*ref\\(\\s*['"\`]([^'"\`]+)['"\`]\\s*\\)`));
+  if (refMatch) {
+    return refMatch[1];
+  }
+  const assignmentExpressions = [
+    ...scriptContent.matchAll(new RegExp(`${escaped}\\.value\\s*=([^\\n;]+)`, 'g')),
+  ].map((match) => match[1]);
+  const createTitleCandidates = assignmentExpressions
+    .flatMap((expression) => [...expression.matchAll(/['"`]([^'"`]*(?:新增|添加|创建|发布)[^'"`]*)['"`]/g)].map((match) => match[1]))
+    .sort((left, right) => Number(left.includes('${')) - Number(right.includes('${')));
+  if (createTitleCandidates.length) {
+    return createTitleCandidates[0];
+  }
+  const assignments = [
+    ...scriptContent.matchAll(new RegExp(`${escaped}\\.value\\s*=\\s*['"\`]([^'"\`]+)['"\`]`, 'g')),
+  ].map((match) => match[1]);
+  return assignments.find((value) => /^(新增|添加|创建|发布)/.test(value)) || assignments[0] || '';
+}
+
+function readStyleObjectText(rawStyle: string) {
+  const raw = String(rawStyle || '');
+  if (!raw) {
+    return '';
+  }
+  const keys = ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'maxHeight', 'overflowY'];
+  return keys
+    .map((key) => {
+      const match = raw.match(new RegExp(`${key}\\s*:\\s*['"]([^'"]+)['"]`));
+      if (!match) {
+        return '';
+      }
+      const cssKey = key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+      return `${cssKey}: ${match[1]}`;
+    })
+    .filter(Boolean)
+    .join('; ');
+}
+
 function readColumnArray(scriptContent: string, variableName: string) {
   const arrayLiteral = extractArrayLiteral(scriptContent, variableName);
   if (!arrayLiteral) {
@@ -734,13 +801,14 @@ function closestHeading(headings: Array<{ index: number; title: string }>, targe
 }
 
 function readStaticAttr(source: string, attrName: string) {
-  const match = source.match(new RegExp(`${attrName}="([^"]+)"`));
+  const escaped = attrName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = source.match(new RegExp(`(?:^|\\s)${escaped}="([^"]+)"`));
   return match?.[1] || '';
 }
 
 function readBoundAttr(source: string, attrName: string) {
   const escaped = attrName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = source.match(new RegExp(`${escaped}="([^"]+)"`));
+  const match = source.match(new RegExp(`(?:^|\\s)${escaped}="([^"]+)"`));
   return match?.[1] || '';
 }
 
@@ -823,13 +891,6 @@ function listVueFiles(directory: string): string[] {
 
 function toComponentPath(viewsRoot: string, filePath: string) {
   return path.relative(viewsRoot, filePath).replace(/\\/g, '/').replace(/\.vue$/, '');
-}
-
-function humanizeBinding(binding?: string) {
-  if (!binding) {
-    return '';
-  }
-  return humanizeName(binding.replace(/Title$/, '').replace(/Visible$/, ''));
 }
 
 function humanizeName(value: string) {

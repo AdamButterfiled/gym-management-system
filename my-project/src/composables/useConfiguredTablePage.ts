@@ -12,12 +12,16 @@ import {
 } from '@/utils/formConfig';
 import { findFormConfigManifestPage } from '@/utils/formConfigManifest';
 import {
+  createDraftFromManifest,
   getQuickSearchConfig,
   normalizePageConfig,
   resolvePrimaryFormTarget,
   resolveTableTarget,
   resolveTarget,
 } from '@/utils/formConfigDesigner';
+
+const FORM_CONFIG_RUNTIME_EVENT = 'gms-form-config-runtime-updated';
+const FORM_CONFIG_RUNTIME_STORAGE_KEY = 'gms-form-config-runtime-updated';
 
 type RuleSource =
   | FormFilterRule[]
@@ -61,7 +65,7 @@ export function useConfiguredTablePage<T extends Record<string, unknown>>(option
   const primaryFormFields = computed<FormFieldConfig[]>(() => primaryFormTarget.value?.fields || []);
   const filterableFields = computed(() => fields.value.filter((field) => field.filterEnabled));
   const quickSearchConfig = computed(() => getQuickSearchConfig(runtimeConfig.value));
-  const quickSearchEnabled = computed(() => (quickSearchConfig.value.fields?.length || 0) > 0);
+  const quickSearchEnabled = computed(() => quickSearchConfig.value.enabled !== false);
   const formInputFollowSystemRadius = computed(() => Boolean(runtimeConfig.value?.formInputFollowSystemRadius));
   const quickSearchPlaceholder = computed(() => quickSearchConfig.value.placeholder || '请输入关键词');
   const activeFilterCount = computed(() => compileFilterRules(filterRules.value, fields.value).length);
@@ -83,20 +87,55 @@ export function useConfiguredTablePage<T extends Record<string, unknown>>(option
     return cloneRules(source.value || []);
   });
 
-  async function ensureConfig() {
-    if (runtimeConfig.value) {
+  async function ensureConfig(force = false) {
+    if (runtimeConfig.value && !force) {
       return runtimeConfig.value;
     }
     configLoading.value = true;
     try {
       const config = await fetchRuntimeFormConfig(options.routePath);
-      const manifest = findFormConfigManifestPage(options.routePath, config.menuBinding?.componentPath);
-      runtimeConfig.value = normalizePageConfig(config, manifest);
+      const manifest = findFormConfigManifestPage(options.routePath, config?.menuBinding?.componentPath);
+      runtimeConfig.value = config
+        ? normalizePageConfig(config, manifest)
+        : createDraftFromManifest({
+            manifest,
+            routePath: options.routePath,
+            pageKey: manifest?.pageKey || options.routePath.replace(/^\/+/, '').replace(/\//g, '-'),
+            pageTitle: manifest?.pageTitle || options.routePath,
+          });
       filterLogic.value = resolveFilterLogic(runtimeConfig.value);
       return runtimeConfig.value;
     } finally {
       configLoading.value = false;
     }
+  }
+
+  function shouldReloadRuntimeConfig(detail: unknown) {
+    const payload = typeof detail === 'string' ? safeParseRuntimePayload(detail) : detail;
+    if (!payload || typeof payload !== 'object') {
+      return false;
+    }
+    const nextRoutePath = String((payload as { routePath?: string }).routePath || '');
+    const nextPageKey = String((payload as { pageKey?: string }).pageKey || '');
+    return nextRoutePath === options.routePath || (runtimeConfig.value?.pageKey && nextPageKey === runtimeConfig.value.pageKey);
+  }
+
+  function handleRuntimeConfigEvent(event: Event) {
+    const detail = event instanceof CustomEvent ? event.detail : null;
+    if (shouldReloadRuntimeConfig(detail)) {
+      void ensureConfig(true);
+    }
+  }
+
+  function handleRuntimeConfigStorage(event: StorageEvent) {
+    if (event.key === FORM_CONFIG_RUNTIME_STORAGE_KEY && shouldReloadRuntimeConfig(event.newValue || '')) {
+      void ensureConfig(true);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener(FORM_CONFIG_RUNTIME_EVENT, handleRuntimeConfigEvent);
+    window.addEventListener('storage', handleRuntimeConfigStorage);
   }
 
   async function loadData() {
@@ -203,6 +242,8 @@ export function useConfiguredTablePage<T extends Record<string, unknown>>(option
       return;
     }
     document.documentElement.classList.remove('page-form-input-radius-linked');
+    window.removeEventListener(FORM_CONFIG_RUNTIME_EVENT, handleRuntimeConfigEvent);
+    window.removeEventListener('storage', handleRuntimeConfigStorage);
   });
 
   return {
@@ -242,4 +283,12 @@ export function useConfiguredTablePage<T extends Record<string, unknown>>(option
     applyAdvancedFilters,
     buildColumns,
   };
+}
+
+function safeParseRuntimePayload(value: string) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }

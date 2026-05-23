@@ -1020,3 +1020,72 @@ function formatUserLabel(user: UserSubject) {
   min-width: 88px;
 }
 </style>
+
+<style>
+html.dark .permission-scope-tab,
+html.dark .permission-subject-card,
+html.dark .permission-user-card,
+html.dark .permission-mode-card,
+html.dark .permission-action-pill {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--mono-text) !important;
+  box-shadow: none !important;
+}
+
+html.dark .permission-scope-tab:hover,
+html.dark .permission-subject-card:hover,
+html.dark .permission-user-card:hover,
+html.dark .permission-mode-card:hover,
+html.dark .permission-action-pill:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+html.dark .permission-scope-tab.is-active,
+html.dark .permission-subject-card.is-active,
+html.dark .permission-user-card.is-active,
+html.dark .permission-mode-card.is-active,
+html.dark .permission-action-pill.is-active {
+  background: #111111 !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+html.dark .permission-scope-desc,
+html.dark .permission-subject-meta,
+html.dark .permission-user-meta,
+html.dark .permission-user-subline,
+html.dark .permission-menu-trail,
+html.dark .permission-path,
+html.dark .permission-empty-text,
+html.dark .permission-modal-subtitle,
+html.dark .permission-mode-desc {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .permission-scope-tab.is-active .permission-scope-desc,
+html.dark .permission-subject-card.is-active .permission-subject-meta,
+html.dark .permission-user-card.is-active .permission-user-meta,
+html.dark .permission-user-card.is-active .permission-user-subline,
+html.dark .permission-mode-card.is-active .permission-mode-desc {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+html.dark .permission-meta-tag,
+html.dark .permission-role-tag,
+html.dark .permission-action-tag,
+html.dark .permission-type-tag,
+html.dark .permission-source-tag {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .permission-role-tag.is-active,
+html.dark .permission-source-tag.is-override,
+html.dark .permission-source-tag.is-deny {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: var(--mono-text) !important;
+}
+</style>

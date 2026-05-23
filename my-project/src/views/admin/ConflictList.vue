@@ -23,7 +23,13 @@
         :pagination="pagination"
         rowKey="id"
         @change="handleTableChange"
-      />
+      >
+        <template #bodyCell="{ column, record }: { column: any; record: ScheduleConflict }">
+          <template v-if="column.key === 'startTime' || column.key === 'endTime' || column.key === 'createdAt'">
+            {{ formatDateTime(record[column.key as keyof ScheduleConflict] as string) }}
+          </template>
+        </template>
+      </StandardTable>
     </section>
   </WorkspacePage>
 
@@ -39,6 +45,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import dayjs from 'dayjs';
 import { ScheduleConflict } from '@/types';
 import { usePageStyle } from '@/hooks/usePageStyle';
 import StandardTable from '@/components/common/StandardTable.vue';
@@ -46,6 +53,7 @@ import WorkspacePage from '@/components/common/WorkspacePage.vue';
 import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
 import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 const { currentStyle, loadMenuConfig } = usePageStyle();
 const {
@@ -73,15 +81,25 @@ const {
 });
 
 const baseColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-  { title: '资源类型', dataIndex: 'resourceType', key: 'resourceType', width: 140 },
   { title: '冲突类型', dataIndex: 'conflictType', key: 'conflictType', width: 160 },
   { title: '消息', dataIndex: 'message', key: 'message' },
+  { title: '资源类型', dataIndex: 'resourceType', key: 'resourceType', width: 140 },
   { title: '开始时间', dataIndex: 'startTime', key: 'startTime', width: 180 },
   { title: '结束时间', dataIndex: 'endTime', key: 'endTime', width: 180 },
-  { title: '记录时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 }
+  { title: '记录时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 }
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const conflictColumnPriority = ['conflictType', 'message', 'resourceType', 'startTime', 'endTime', 'createdAt', 'id'];
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), conflictColumnPriority));
+
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : value.replace('T', ' ');
+};
 
 onMounted(() => {
   loadMenuConfig();

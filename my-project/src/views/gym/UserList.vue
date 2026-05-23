@@ -90,12 +90,21 @@
 
             <template v-else-if="column.key === 'createdAt'">
                 <span :class="['soft-text', { 'soft-text--muted': !record.createdAt }]">
-                    {{ record.createdAt || '未记录' }}
+                    {{ formatDateTime(record.createdAt) }}
                 </span>
             </template>
 
             <template v-else-if="column.key === 'balance'">
                 <span class="balance-cell">¥ {{ formatBalance(record.balance) }}</span>
+            </template>
+
+            <template v-else-if="column.key === 'action'">
+                <a-space>
+                    <StandardButton type="link" size="sm" class="table-action-link" @click="handleEdit(record)">编辑</StandardButton>
+                    <a-popconfirm title="确定删除该用户吗？" @confirm="handleDelete(record.id)">
+                        <StandardButton type="link" size="sm" danger class="table-action-link">删除</StandardButton>
+                    </a-popconfirm>
+                </a-space>
             </template>
         </template>
         </StandardTable>
@@ -204,9 +213,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue';
+import dayjs from 'dayjs';
 import { message } from 'ant-design-vue';
 import request from '@/request';
-import { User, PageResult } from '@/types';
+import { User } from '@/types';
 import { usePageStyle } from '@/hooks/usePageStyle';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
 import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
@@ -220,6 +230,7 @@ import StandardTable from '@/components/common/StandardTable.vue';
 import BatchDeleteButton from '@/components/common/BatchDeleteButton.vue';
 import StandardModal from '@/components/common/StandardModal.vue';
 import WorkspacePage from '@/components/common/WorkspacePage.vue';
+import { sortColumnsByPriority } from '@/utils/tableColumns';
 
 const { currentStyle, loadMenuConfig } = usePageStyle();
 const selectedRowKeys = ref<number[]>([]);
@@ -246,10 +257,16 @@ const {
   handleTableChange,
   applyAdvancedFilters,
   buildColumns,
-  isFieldVisible,
 } = useConfiguredTablePage<User>({
   routePath: '/user',
 });
+
+type ApiResponse = {
+  code?: number;
+  msg?: string;
+};
+
+type UserSavePayload = Partial<User>;
 
 const modalVisible = ref(false);
 const modalTitle = ref('新增用户');
@@ -276,7 +293,6 @@ const roleMeta: Record<User['role'], { label: string; tone: string }> = {
 };
 
 const baseColumns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 92 },
   {
     title: '用户名',
     dataIndex: 'username',
@@ -286,15 +302,18 @@ const baseColumns = [
     customCell: () => ({ class: 'column-username-cell' }),
   },
   { title: '真实姓名', dataIndex: 'realName', key: 'realName', width: 160 },
-  { title: '昵称', dataIndex: 'nickname', key: 'nickname', width: 220 },
-  { title: '邮箱', dataIndex: 'email', key: 'email', width: 220 },
   { title: '角色', dataIndex: 'role', key: 'role', width: 140 },
-  { title: '手机号', dataIndex: 'phone', key: 'phone', width: 190 },
-  { title: '余额', dataIndex: 'balance', key: 'balance', width: 140 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 120 },
+  { title: '手机号', dataIndex: 'phone', key: 'phone', width: 190 },
+  { title: '邮箱', dataIndex: 'email', key: 'email', width: 220 },
+  { title: '余额', dataIndex: 'balance', key: 'balance', width: 140 },
+  { title: '昵称', dataIndex: 'nickname', key: 'nickname', width: 220 },
   { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 92 },
+  { title: '操作', key: 'action', width: 140 },
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const userColumnPriority = ['username', 'realName', 'role', 'status', 'phone', 'email', 'balance', 'nickname', 'createdAt', 'id', 'action'];
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), userColumnPriority));
 
 const rowSelection = computed(() => {
     if (!isDeleteMode.value) return null; // Only show checkboxes in delete mode
@@ -309,10 +328,35 @@ const rowSelection = computed(() => {
 const getRoleLabel = (role: User['role']) => roleMeta[role]?.label || '会员';
 const getRoleTone = (role: User['role']) => roleMeta[role]?.tone || 'member';
 const getUserInitial = (username: string) => (username || 'U').slice(0, 1).toUpperCase();
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return '未记录';
+  }
+
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : value.replace('T', ' ');
+};
 const formatBalance = (value?: number) => Number(value || 0).toLocaleString('zh-CN', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
+
+const resetFormState = (record?: Partial<User>) => {
+  Object.assign(formState, {
+    id: record?.id ?? 0,
+    username: record?.username ?? '',
+    realName: record?.realName ?? '',
+    nickname: record?.nickname ?? '',
+    phone: record?.phone ?? '',
+    email: record?.email ?? '',
+    role: (record?.role || undefined) as User['role'],
+    balance: record?.balance,
+    type: record?.type,
+    status: record?.status,
+    avatar: record?.avatar,
+    createdAt: record?.createdAt,
+  });
+};
 
 // Clear selection when mode is toggled off
 watch(isDeleteMode, (newVal) => {
@@ -323,39 +367,68 @@ watch(isDeleteMode, (newVal) => {
 
 const handleAdd = () => {
   modalTitle.value = '新增用户';
-  formState.id = 0;
-  formState.username = '';
-  formState.realName = '';
-  formState.nickname = '';
-  formState.phone = '';
-  formState.email = '';
-  formState.role = undefined as any;
-  formState.balance = undefined as any;
+  resetFormState();
+  modalVisible.value = true;
+};
+
+const handleEdit = (record: User) => {
+  modalTitle.value = '编辑用户';
+  resetFormState(record);
   modalVisible.value = true;
 };
 
 const handleBatchDelete = () => {
     if(selectedRowKeys.value.length === 0) return;
-    request.delete("/user/batch", { data: selectedRowKeys.value }).then((res: any) => {
+    request.delete("/user/batch", { data: selectedRowKeys.value }).then((res: ApiResponse) => {
         if(res.code === 200) {
             message.success("删除成功");
             selectedRowKeys.value = [];
             isDeleteMode.value = false; // Turn off mode after successful delete
             loadData();
         } else {
-            message.error(res.msg);
+            message.error(res.msg || "删除失败");
         }
     });
 };
 
+const handleDelete = (id: number) => {
+    request.delete("/user/" + id).then((res: ApiResponse) => {
+        if(res.code === 200) {
+            message.success("删除成功");
+            loadData();
+        } else {
+            message.error(res.msg || "删除失败");
+        }
+    });
+};
+
+const buildSavePayload = (): UserSavePayload => {
+    const payload: UserSavePayload = {
+        username: formState.username,
+        realName: formState.realName,
+        nickname: formState.nickname,
+        phone: formState.phone,
+        email: formState.email,
+        role: formState.role,
+        balance: formState.balance,
+        type: formState.type,
+        status: formState.status,
+        avatar: formState.avatar,
+    };
+    if (formState.id) {
+        payload.id = formState.id;
+    }
+    return payload;
+};
+
 const handleModalOk = () => {
-    request.post("/user", formState).then((res: any) => {
+    request.post("/user", buildSavePayload()).then((res: ApiResponse) => {
         if(res.code === 200){
             message.success("保存成功");
             modalVisible.value = false;
             loadData();
         } else {
-            message.error(res.msg);
+            message.error(res.msg || "保存失败");
         }
     });
 };
@@ -543,7 +616,7 @@ html.dark .user-list-page {
   --text-primary: rgba(255, 255, 255, 0.94);
   --text-secondary: rgba(255, 255, 255, 0.68);
   --text-tertiary: rgba(255, 255, 255, 0.42);
-  background: #000000;
+  background: #111111;
 }
 
 html.dark .user-list-page .page-meta,

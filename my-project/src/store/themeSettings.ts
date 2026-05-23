@@ -59,6 +59,13 @@ const resolvedThemeColor = !saved.themeColor || saved.themeColor === LEGACY_THEM
     ? DEFAULT_THEME_COLOR
     : saved.themeColor;
 
+function applyDocumentDarkState(isDark: boolean) {
+    if (typeof document === 'undefined') return;
+
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+}
+
 // Detect system preference
 function getSystemDarkPreference(): boolean {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -72,17 +79,23 @@ function resolveIsDark(mode: DarkMode): boolean {
 
 const themeSettingsModule = {
     namespaced: true,
-    state: (): ThemeSettingsState => ({
-        styleMode: (saved.styleMode as StyleMode) || 'glass',
-        themeColor: resolvedThemeColor,
-        artisticTitles: saved.artisticTitles !== undefined ? Boolean(saved.artisticTitles) : true,
-        globalArtFont: saved.globalArtFont !== undefined ? Boolean(saved.globalArtFont) : false,
-        borderRadius: saved.borderRadius !== undefined ? saved.borderRadius : true,
-        colorfulTags: saved.colorfulTags !== undefined ? Boolean(saved.colorfulTags) : false,
-        ledgerShell: saved.ledgerShell !== undefined ? Boolean(saved.ledgerShell) : false,
-        darkMode: (saved.darkMode as DarkMode) || 'light',
-        isDark: resolveIsDark((saved.darkMode as DarkMode) || 'light'),
-    }),
+    state: (): ThemeSettingsState => {
+        const darkMode = (saved.darkMode as DarkMode) || 'light';
+        const isDark = resolveIsDark(darkMode);
+        applyDocumentDarkState(isDark);
+
+        return {
+            styleMode: (saved.styleMode as StyleMode) || 'glass',
+            themeColor: resolvedThemeColor,
+            artisticTitles: saved.artisticTitles !== undefined ? Boolean(saved.artisticTitles) : true,
+            globalArtFont: saved.globalArtFont !== undefined ? Boolean(saved.globalArtFont) : false,
+            borderRadius: saved.borderRadius !== undefined ? saved.borderRadius : true,
+            colorfulTags: saved.colorfulTags !== undefined ? Boolean(saved.colorfulTags) : false,
+            ledgerShell: saved.ledgerShell !== undefined ? Boolean(saved.ledgerShell) : false,
+            darkMode,
+            isDark,
+        };
+    },
     getters: {
         styleMode: (state: ThemeSettingsState) => state.styleMode,
         themeColor: (state: ThemeSettingsState) => state.themeColor,
@@ -128,10 +141,12 @@ const themeSettingsModule = {
         SET_DARK_MODE(state: ThemeSettingsState, mode: DarkMode) {
             state.darkMode = mode;
             state.isDark = resolveIsDark(mode);
+            applyDocumentDarkState(state.isDark);
             saveToStorage(state);
         },
         SET_IS_DARK(state: ThemeSettingsState, isDark: boolean) {
             state.isDark = isDark;
+            applyDocumentDarkState(isDark);
         },
     },
     actions: {

@@ -28,7 +28,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
-import axios from 'axios';
+import request from '@/request';
 import StandardButton from '@/components/common/StandardButton.vue';
 
 const route = useRoute();
@@ -40,15 +40,15 @@ const confirmLogin = async () => {
   status.value = '正在确认...';
 
   try {
-    const res = await axios.post('/api/login', { uuid });
-    if (res.data.success) {
+    const res = await request.get('/api/confirm', { params: { uuid } });
+    if (res.code === 200) {
       isConfirmed.value = true;
       status.value = 'PC端登录确认成功';
     } else {
-      status.value = `失败: ${res.data.message}`;
+      status.value = `失败: ${res.msg || '确认失败'}`;
     }
   } catch (error) {
-    status.value = '网络错误';
+    status.value = '请先登录后再确认扫码';
   }
 };
 </script>

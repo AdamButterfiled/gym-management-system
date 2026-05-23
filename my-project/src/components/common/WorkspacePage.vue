@@ -91,6 +91,15 @@ const resolvedBodySurface = computed(() => {
   padding-right: 0;
 }
 
+.workspace-shell--menu-list.adaptive-table-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 0;
+}
+
 .workspace-header {
   display: flex;
   align-items: flex-start;
@@ -166,6 +175,11 @@ const resolvedBodySurface = computed(() => {
   transform: translate(-6px, -11px);
 }
 
+.workspace-shell--menu-list.adaptive-table-page .page-title {
+  line-height: 1.14;
+  transform: none;
+}
+
 .workspace-shell--menu-list .workspace-controls {
   display: flex;
   flex-direction: column;
@@ -178,6 +192,19 @@ const resolvedBodySurface = computed(() => {
   top: 10px;
 }
 
+.workspace-shell--menu-list.adaptive-table-page .workspace-header {
+  flex: 0 0 auto;
+  gap: 26px;
+  margin-bottom: 40px;
+  padding-top: 0;
+}
+
+.workspace-shell--menu-list.adaptive-table-page .workspace-controls {
+  gap: 48px;
+  top: 10px;
+  padding-bottom: 4px;
+}
+
 .workspace-shell--menu-list .filter-row {
   display: flex;
   align-items: center;
@@ -187,6 +214,12 @@ const resolvedBodySurface = computed(() => {
   margin-top: 24px;
   margin-bottom: -24px;
   position: relative;
+  top: -10px;
+}
+
+.workspace-shell--menu-list.adaptive-table-page .filter-row {
+  margin-top: 24px;
+  margin-bottom: -24px;
   top: -10px;
 }
 
@@ -202,10 +235,19 @@ const resolvedBodySurface = computed(() => {
   margin-top: 9px;
 }
 
+.workspace-shell--menu-list.adaptive-table-page .actions-row {
+  margin-top: 9px;
+  padding-left: 14px;
+}
+
 .workspace-shell--menu-list .actions-row > * {
   position: relative;
   top: 24px;
   flex: 0 0 auto;
+}
+
+.workspace-shell--menu-list.adaptive-table-page .actions-row > * {
+  top: 24px;
 }
 
 .workspace-shell--menu-list .workspace-body {
@@ -221,8 +263,28 @@ const resolvedBodySurface = computed(() => {
   top: 10px;
 }
 
+.workspace-shell--menu-list.adaptive-table-page .workspace-body-card {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 22px;
+  padding-top: 10px !important;
+  top: 0;
+  overflow: hidden;
+}
+
 .workspace-shell--menu-list .workspace-body--card {
   padding-top: 0;
+}
+
+.workspace-shell--menu-list.adaptive-table-page .workspace-body,
+.workspace-shell--menu-list.adaptive-table-page .workspace-body--card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 0;
+  overflow: hidden;
 }
 
 .workspace-shell--menu-list :deep(.table-search-toolbar--menu-list) {

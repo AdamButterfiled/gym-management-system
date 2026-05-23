@@ -1,5 +1,5 @@
 <template>
-  <WorkspacePage title="私教排班管理" variant="menu-list">
+  <WorkspacePage class="private-schedule-page adaptive-table-page" title="私教排班管理" variant="menu-list">
     <template #actions>
       <StandardButton type="add" icon="plus" @click="openAdd">新增私教时段</StandardButton>
     </template>
@@ -18,7 +18,7 @@
       />
     </template>
 
-    <section class="workspace-subsection">
+    <section ref="tableSectionRef" class="workspace-subsection">
       <StandardTable
         :configStyle="currentStyle"
         surface="menu-list"
@@ -26,7 +26,8 @@
         :columns="columns"
         :pagination="pagination"
         rowKey="id"
-        @change="handleTableChange"
+        :scroll="tableScroll"
+        @change="handlePrivateTableChange"
       >
         <template #bodyCell="{ column, record }: { column: any; record: PrivateSchedule }">
           <template v-if="column.key === 'coachId'">
@@ -35,8 +36,11 @@
           <template v-if="column.key === 'venueId'">
             {{ venueNameMap[record.venueId || 0] || '-' }}
           </template>
-          <template v-if="column.key === 'period'">
-            {{ record.startTime }}<br />{{ record.endTime }}
+          <template v-if="column.key === 'scheduleDate'">
+            {{ formatScheduleDate(record.startTime) }}
+          </template>
+          <template v-if="column.key === 'timeRange'">
+            {{ formatClockRange(record.startTime, record.endTime) }}
           </template>
           <template v-if="column.key === 'bookedCount'">
             {{ record.bookedCount || 0 }} / {{ record.capacity || 1 }}
@@ -46,8 +50,11 @@
               {{ record.status === 'CLOSED' ? '已关闭' : '开放预约' }}
             </span>
           </template>
+          <template v-if="column.key === 'description'">
+            <span class="private-note-cell">{{ record.description || '-' }}</span>
+          </template>
           <template v-if="column.key === 'action'">
-            <a-space>
+            <a-space class="private-row-actions">
               <StandardButton type="link" size="sm" class="table-action-link" @click="openEdit(record)">编辑</StandardButton>
               <a-popconfirm title="确定删除该私教时段吗？" @confirm="handleDelete(record.id!)">
                 <StandardButton type="link" size="sm" danger class="table-action-link">删除</StandardButton>
@@ -138,6 +145,8 @@ import TableSearchToolbar from '@/components/common/TableSearchToolbar.vue';
 import AdvancedFilterModal from '@/components/common/AdvancedFilterModal.vue';
 import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
 import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
+import { useAdaptiveTablePage } from '@/composables/useAdaptiveTablePage';
+import { getTableColumnKey, sortColumnsByPriority } from '@/utils/tableColumns';
 
 const { currentStyle, loadMenuConfig } = usePageStyle();
 const coachOptions = ref<CoachProfile[]>([]);
@@ -173,6 +182,26 @@ const {
   routePath: '/private-schedule',
 });
 
+const {
+  tableSectionRef,
+  tableBodyHeight,
+  applyAdaptiveTableLayout,
+  handleAdaptiveTableChange,
+  startAdaptiveTableLayout,
+} = useAdaptiveTablePage({
+  pagination,
+  loadData,
+  minPageSize: 4,
+  maxPageSize: 50,
+  maxAutoPageSize: 10,
+  minBodyHeight: 220,
+  fallbackRowHeight: 72,
+  headerHeight: 44,
+  footerHeight: 88,
+  bottomGutter: 18,
+  bodyReserve: 8,
+});
+
 const formState = reactive<PrivateSchedule>({
   id: undefined,
   coachId: undefined,
@@ -202,18 +231,69 @@ const venueNameMap = computed<Record<number, string>>(() => {
 });
 
 const baseColumns = [
-  { title: '教练', dataIndex: 'coachId', key: 'coachId', width: 140 },
-  { title: '场馆', dataIndex: 'venueId', key: 'venueId', width: 160 },
-  { title: '时段', key: 'period', configKey: 'period', width: 220 },
-  { title: '开始时间', dataIndex: 'startTime', key: 'startTime', width: 180 },
-  { title: '结束时间', dataIndex: 'endTime', key: 'endTime', width: 180 },
-  { title: '可约人数', dataIndex: 'capacity', key: 'capacity', width: 120 },
-  { title: '预约情况', dataIndex: 'bookedCount', key: 'bookedCount', width: 120 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 120 },
-  { title: '备注', dataIndex: 'description', key: 'description' },
-  { title: '操作', key: 'action', width: 140 }
+  { title: '教练', dataIndex: 'coachId', key: 'coachId', width: 120 },
+  { title: '日期', key: 'scheduleDate', configKey: 'period', width: 138 },
+  { title: '时间', key: 'timeRange', configKey: 'period', width: 136 },
+  { title: '场馆', dataIndex: 'venueId', key: 'venueId', width: 140 },
+  { title: '预约', dataIndex: 'bookedCount', key: 'bookedCount', width: 104 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 116 },
+  { title: '可约人数', dataIndex: 'capacity', key: 'capacity', width: 104 },
+  { title: '备注', dataIndex: 'description', key: 'description', width: 220 },
+  { title: '操作', key: 'action', width: 112 }
 ];
-const columns = computed(() => buildColumns(baseColumns));
+const privateColumnPriority = ['coachId', 'scheduleDate', 'timeRange', 'venueId', 'bookedCount', 'status', 'capacity', 'description', 'action'];
+const privateColumnWidths: Record<string, number> = {
+  coachId: 120,
+  scheduleDate: 138,
+  timeRange: 136,
+  venueId: 140,
+  bookedCount: 104,
+  status: 116,
+  capacity: 104,
+  description: 220,
+  action: 112,
+};
+
+const columns = computed(() => sortColumnsByPriority(buildColumns(baseColumns), privateColumnPriority).map((column) => ({
+  ...column,
+  width: privateColumnWidths[getTableColumnKey(column)] ?? column.width,
+})));
+const tableScroll = computed(() => ({
+  y: tableBodyHeight.value,
+}));
+
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm') : value.replace('T', ' ');
+};
+
+const formatScheduleDate = (value?: string) => {
+  if (!value) {
+    return '-';
+  }
+
+  const parsed = dayjs(value);
+  return parsed.isValid() ? parsed.format('YYYY-MM-DD') : value.replace('T', ' ').slice(0, 10);
+};
+
+const formatClockRange = (start?: string, end?: string) => {
+  if (!start && !end) {
+    return '-';
+  }
+
+  const startAtValue = start ? dayjs(start) : null;
+  const endAtValue = end ? dayjs(end) : null;
+
+  if (startAtValue?.isValid() && endAtValue?.isValid() && startAtValue.isSame(endAtValue, 'day')) {
+    return `${startAtValue.format('HH:mm')} - ${endAtValue.format('HH:mm')}`;
+  }
+
+  return `${formatDateTime(start)} - ${formatDateTime(end)}`;
+};
 
 const loadOptions = async () => {
   const [coachRes, venueRes] = await Promise.all([
@@ -279,12 +359,85 @@ const handleDelete = async (id: number) => {
   }
 };
 
+const handlePrivateTableChange = (pag: { current: number; pageSize: number }) => {
+  return handleAdaptiveTableChange(pag, handleTableChange);
+};
+
 onMounted(async () => {
   loadMenuConfig();
   await ensureConfig();
+  await startAdaptiveTableLayout(false);
   await loadOptions();
-  loadData();
+  await loadData();
+  await applyAdaptiveTableLayout(true);
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.private-schedule-page {
+  --private-table-header-height: 44px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.private-schedule-page :deep(.workspace-body-card),
+.private-schedule-page :deep(.workspace-body--card),
+.private-schedule-page :deep(.workspace-subsection) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.private-schedule-page :deep(.workspace-body-card) {
+  overflow: hidden;
+}
+
+.private-schedule-page :deep(.workspace-subsection > .table-surface--menu-list) {
+  flex: 1 1 auto;
+}
+
+.private-schedule-page :deep(.table-surface--menu-list--custom-pagination .std-table-main),
+.private-schedule-page :deep(.table-surface--menu-list--custom-pagination .std-table-main > .ant-table-wrapper) {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.private-schedule-page :deep(.ant-table-wrapper) {
+  min-height: 0;
+}
+
+.private-schedule-page :deep(.ant-table table) {
+  table-layout: fixed !important;
+}
+
+.private-schedule-page :deep(.ant-table-thead > tr > th) {
+  height: var(--private-table-header-height) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  vertical-align: middle !important;
+}
+
+.private-schedule-page :deep(.ant-table-tbody > tr.ant-table-row > td) {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  vertical-align: middle !important;
+}
+
+.private-note-cell {
+  display: inline-block;
+  max-width: 210px;
+  overflow: hidden;
+  color: var(--mono-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.private-row-actions {
+  white-space: nowrap;
+}
+</style>

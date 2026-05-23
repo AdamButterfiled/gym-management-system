@@ -4,6 +4,7 @@ import { message } from 'ant-design-vue';
 import { RouteLocationNormalized, NavigationGuardNext } from 'vue-router';
 import { clearAuthStorage, getStoredUser, hasValidToken } from '@/utils/auth';
 import { collectRouteCandidates, getSmartRedirectTarget, isRouteFallback, normalizeRoutePath } from './router/routeCorrection';
+import { resolveMenuComponentStyle, type MenuStyleNode } from '@/utils/menuStyle';
 
 const viewModules: Record<string, () => Promise<unknown>> = import.meta.glob('./views/**/*.vue');
 
@@ -85,6 +86,15 @@ const redirectToFirstAccessibleMenu = (
     redirectToNotFound(next, currentPath);
 };
 
+const syncRegisteredRouteStyles = (menuList: MenuStyleNode[]) => {
+    router.getRoutes().forEach((route) => {
+        const resolvedStyle = resolveMenuComponentStyle(menuList, route.path);
+        if (resolvedStyle) {
+            route.meta.style = resolvedStyle;
+        }
+    });
+};
+
 const registerDynamicRoutes = (menuList: any[]) => {
     menuList.forEach((menu: any) => {
         if (isPlaceholderMenuComponent(menu.component)) {
@@ -96,26 +106,7 @@ const registerDynamicRoutes = (menuList: any[]) => {
                     return;
                 }
 
-                let effectiveStyle = menu.componentStyle;
-                if (!effectiveStyle && menu.parentId) {
-                    let currentParentId = menu.parentId;
-                    while (currentParentId) {
-                        const parent = menuList.find((item: any) => item.id === currentParentId);
-                        if (parent) {
-                            if (parent.componentStyle) {
-                                effectiveStyle = parent.componentStyle;
-                                break;
-                            }
-                            currentParentId = parent.parentId;
-                        } else {
-                            break;
-                        }
-                    }
-                }
-
-                if (!effectiveStyle) {
-                    effectiveStyle = 'default';
-                }
+                const effectiveStyle = resolveMenuComponentStyle(menuList, menu.path) || 'default';
 
                 router.addRoute('HomePage', {
                     path: menu.path.replace(/^\//, ''),
@@ -131,6 +122,7 @@ const registerDynamicRoutes = (menuList: any[]) => {
             }
         }
     });
+    syncRegisteredRouteStyles(menuList);
 };
 
 const redirectToResolvedPath = (

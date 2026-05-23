@@ -259,7 +259,7 @@ export default defineConfig({
     },
     server: {
         host: '0.0.0.0',
-        port: 8080,
+        port: 7431,
         strictPort: true,
         headers: {
             'Cache-Control': 'no-store',

@@ -131,7 +131,6 @@
         <div class="mascot-stage">
           <PolarBearLoginMascot
             :mode="mascotMode"
-            :idle-interact-tick="accountInteractTick"
             :interrupt-tick="mascotInterruptTick"
             :pointer="mascotPointer"
             :reduced-motion="reducedMotion"
@@ -147,7 +146,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -213,7 +212,6 @@ const account = ref('');
 const password = ref('');
 const rememberMe = ref(false);
 const rememberedRole = ref('');
-const accountInteractTick = ref(0);
 const mascotInterruptTick = ref(0);
 const dailyVisualQuote = ref(DAILY_VISUAL_QUOTES[0]);
 
@@ -471,13 +469,7 @@ function interruptMascotIntro(nextMode = 'idle') {
   }
 }
 
-function queueIdleInteract() {
-  nextTick(() => {
-    accountInteractTick.value += 1;
-  });
-}
-
-function playMascotSmileInteract() {
+function showIdleMascot() {
   if (forcedMascotMode.value) {
     return;
   }
@@ -485,7 +477,6 @@ function playMascotSmileInteract() {
   interruptMascotIntro('idle');
   mascotLocked.value = false;
   mascotMode.value = 'idle';
-  queueIdleInteract();
 }
 
 function syncMascotToAmbient() {
@@ -639,9 +630,7 @@ async function initQrCode() {
 
     uuid.value = uuidValue;
 
-    const host = window.location.hostname;
-    const port = window.location.port;
-    const mobileUrl = `http://${host}:${port}/mobile/${uuid.value}`;
+    const mobileUrl = `${window.location.origin}/mobile/${uuid.value}`;
 
     qrUrl.value = await QRCode.toDataURL(mobileUrl, {
       width: 200,
@@ -705,7 +694,7 @@ function onAccountFocus() {
   }
 
   isPasswordFocused.value = false;
-  playMascotSmileInteract();
+  showIdleMascot();
 }
 
 function onPasswordFocus() {
@@ -831,7 +820,7 @@ watch(activeKey, (newValue) => {
       startPolling();
     }
 
-    playMascotSmileInteract();
+    showIdleMascot();
   } else {
     stopPolling();
   }
@@ -1212,6 +1201,7 @@ onUnmounted(() => {
   border: none !important;
   border-radius: var(--mono-radius-lg) !important;
   background: linear-gradient(135deg, #0f0f10 0%, #252527 100%) !important;
+  color: #ffffff !important;
   box-shadow: none !important;
   font-size: 17px;
   font-weight: 400;
@@ -1490,74 +1480,6 @@ onUnmounted(() => {
   user-select: none;
 }
 
-:global(html.dark) .login-wrapper {
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.06), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.08), transparent 30%),
-    linear-gradient(135deg, #101011 0%, #141415 46%, #0d0d0e 100%);
-}
-
-:global(html.dark) .login-wrapper::before,
-:global(html.dark) .login-visual::before {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-}
-
-:global(html.dark) .login-wrapper::after {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-:global(html.dark) .login-shell {
-  background: transparent;
-}
-
-:global(html.dark) .login-form-pane {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
-  border-right-color: rgba(255, 255, 255, 0.08);
-}
-
-:global(html.dark) .avatar-shell {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-:global(html.dark) .qr-wrapper {
-  background: transparent;
-}
-
-:global(html.dark) .login-panel {
-  background: transparent;
-  box-shadow: none;
-}
-
-:global(html.dark) .login-panel::before {
-  background: transparent;
-}
-
-:global(html.dark) :deep(.ant-input):not(.ant-input-affix-wrapper > input),
-:global(html.dark) :deep(.ant-input-affix-wrapper) {
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-
-:global(html.dark) :deep(.ant-input:focus):not(.ant-input-affix-wrapper > input),
-:global(html.dark) :deep(.ant-input:hover):not(.ant-input-affix-wrapper > input),
-:global(html.dark) :deep(.ant-input-affix-wrapper-focused),
-:global(html.dark) :deep(.ant-input-affix-wrapper:hover) {
-  background: rgba(255, 255, 255, 0.07) !important;
-}
-
-:global(html.dark) :deep(.custom-tabs .ant-tabs-nav-list) {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-:global(html.dark) :deep(.custom-tabs .ant-tabs-tab-active) {
-  background: rgba(255, 255, 255, 0.94);
-}
-
-:global(html.dark) :deep(.custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: #111111 !important;
-}
-
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -1627,9 +1549,6 @@ onUnmounted(() => {
     border-top-color: rgba(17, 17, 17, 0.06);
   }
 
-  :global(html.dark) .login-form-pane {
-    border-top-color: rgba(255, 255, 255, 0.08);
-  }
 }
 
 @media (max-width: 640px) {
@@ -1696,6 +1615,148 @@ onUnmounted(() => {
   .mascot-stage :deep(.polar-bear-mascot) {
     width: min(640px, 100%);
     height: min(640px, 100%);
+  }
+}
+</style>
+
+<style>
+html.dark .login-wrapper {
+  background: #111111;
+}
+
+html.dark .login-wrapper::before,
+html.dark .login-visual::before {
+  display: none;
+  background: none;
+}
+
+html.dark .login-wrapper::after {
+  display: none;
+  background: none;
+}
+
+html.dark .login-shell,
+html.dark .login-form-pane,
+html.dark .login-visual,
+html.dark .qr-wrapper,
+html.dark .login-panel,
+html.dark .login-panel::before {
+  background: #111111;
+}
+
+html.dark .login-panel {
+  box-shadow: none;
+}
+
+html.dark .login-form-pane {
+  border-right-color: rgba(255, 255, 255, 0.14);
+}
+
+html.dark .login-visual {
+  background: #111111;
+}
+
+html.dark .login-visual::after {
+  display: none;
+  background: none;
+  filter: none;
+}
+
+html.dark .visual-orbit,
+html.dark .visual-watermark {
+  display: none;
+}
+
+html.dark .brand-copy strong,
+html.dark .profile-copy strong,
+html.dark .panel-heading h1,
+html.dark .visual-copy h2 {
+  color: #ffffff;
+}
+
+html.dark .brand-kicker,
+html.dark .profile-role,
+html.dark .typewriter-text,
+html.dark .form-remember,
+html.dark .forgot-password,
+html.dark .login-wrapper .ant-checkbox + span,
+html.dark .login-wrapper .custom-tabs .ant-tabs-tab,
+html.dark .login-wrapper .custom-tabs .ant-tabs-tab-btn {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+html.dark .forgot-password:hover,
+html.dark .login-wrapper .custom-tabs .ant-tabs-tab:hover,
+html.dark .login-wrapper .custom-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn {
+  color: #ffffff !important;
+}
+
+html.dark .avatar-shell {
+  background: #1f1f1f;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+html.dark .brand-logo {
+  filter: invert(1) grayscale(1) contrast(1.06);
+}
+
+html.dark .login-wrapper .ant-input:not(.ant-input-affix-wrapper > input),
+html.dark .login-wrapper .ant-input-affix-wrapper {
+  background: #1f1f1f !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+html.dark .login-wrapper .ant-input:focus:not(.ant-input-affix-wrapper > input),
+html.dark .login-wrapper .ant-input:hover:not(.ant-input-affix-wrapper > input),
+html.dark .login-wrapper .ant-input-affix-wrapper-focused,
+html.dark .login-wrapper .ant-input-affix-wrapper:hover {
+  background: #151515 !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+html.dark .login-wrapper .ant-input::placeholder,
+html.dark .login-wrapper .ant-input-affix-wrapper input::placeholder {
+  color: rgba(255, 255, 255, 0.66) !important;
+}
+
+html.dark .login-wrapper .custom-tabs .ant-tabs-nav-list {
+  background: #1f1f1f;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+html.dark .login-wrapper .custom-tabs .ant-tabs-tab-active {
+  background: #111111;
+}
+
+html.dark .login-wrapper .custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+html.dark .login-wrapper .ant-btn-primary.login-submit,
+html.dark .login-wrapper .login-submit {
+  background: #151515 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+html.dark .login-wrapper .ant-btn-primary.login-submit:hover,
+html.dark .login-wrapper .login-submit:hover {
+  background: #2a2a2a !important;
+  color: #ffffff !important;
+}
+
+html.dark .login-wrapper .mascot-stage .bear-asset {
+  filter: drop-shadow(0 28px 34px rgba(0, 0, 0, 0.38));
+}
+
+html.dark .login-wrapper .mascot-stage .idle-blink-overlay {
+  filter: none;
+}
+
+@media (max-width: 1120px) {
+  html.dark .login-form-pane {
+    border-top-color: rgba(255, 255, 255, 0.08);
   }
 }
 </style>

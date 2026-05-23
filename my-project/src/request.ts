@@ -13,15 +13,14 @@ const resolveApiBaseUrl = () => {
     }
 
     if (typeof window === 'undefined') {
-        return 'http://localhost:9090';
+        return '';
     }
 
     if (import.meta.env.DEV) {
         return '';
     }
 
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:9090`;
+    return '';
 };
 
 const request = axios.create({

@@ -1,6 +1,6 @@
 <template>
   <template v-if="variant === 'flow'">
-    <template v-for="field in visibleFields" :key="field.fieldKey">
+    <template v-for="field in renderFields" :key="field.fieldKey">
       <slot :name="slotName(field.fieldKey)" :field="field">
         <a-form-item :label="field.label">
           <a-input :value="field.placeholder || field.label" disabled />
@@ -11,7 +11,7 @@
 
   <div v-else class="configured-form-layout">
     <div
-      v-for="field in visibleFields"
+      v-for="field in renderFields"
       :key="field.fieldKey"
       class="configured-form-layout__cell"
       :style="fieldStyle(field)"
@@ -26,29 +26,53 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useSlots } from 'vue';
 import type { CSSProperties } from 'vue';
 import type { FormFieldConfig } from '@/types/formConfig';
+import {
+  FORM_LAYOUT_GRID_COLUMNS,
+  FORM_LAYOUT_GRID_PRECISION,
+  FORM_LAYOUT_RENDER_COLUMNS,
+  normalizeConfiguredFieldLayout,
+  normalizeConfiguredFormFields,
+  toFormLayoutRenderTrack,
+} from '@/utils/formLayoutRuntime';
 
 const props = defineProps<{
   fields: FormFieldConfig[];
   variant?: 'grid' | 'flow';
+  includeHidden?: boolean;
 }>();
 
-const visibleFields = computed(() =>
-  [...(props.fields || [])]
-    .filter((field) => (field.visible ?? field.columnVisible ?? true) !== false)
-    .sort((left, right) => {
-      const leftLayout = left.layout || { x: 0, y: left.order ?? left.columnOrder ?? 0, w: 12, h: 1 };
-      const rightLayout = right.layout || { x: 0, y: right.order ?? right.columnOrder ?? 0, w: 12, h: 1 };
-      if (leftLayout.y !== rightLayout.y) {
-        return leftLayout.y - rightLayout.y;
-      }
-      if (leftLayout.x !== rightLayout.x) {
-        return leftLayout.x - rightLayout.x;
-      }
-      return (left.order ?? left.columnOrder ?? 0) - (right.order ?? right.columnOrder ?? 0);
+const slots = useSlots();
+
+const fallbackSlotFields = computed<FormFieldConfig[]>(() =>
+  Object.keys(slots)
+    .filter((name) => name.startsWith('field-'))
+    .map((name, index) => {
+      const fieldKey = name.slice('field-'.length);
+      return {
+        fieldKey,
+        label: humanizeFieldKey(fieldKey),
+        queryKey: fieldKey,
+        visible: true,
+        order: index,
+        columnVisible: true,
+        columnOrder: index,
+        layout: {
+          x: 0,
+          y: index,
+          w: FORM_LAYOUT_GRID_COLUMNS,
+          h: 1,
+        },
+      };
     })
+);
+
+const renderFields = computed(() =>
+  normalizeConfiguredFormFields((props.fields || []).length ? props.fields : fallbackSlotFields.value, {
+    includeHidden: props.includeHidden,
+  })
 );
 
 function slotName(fieldKey: string) {
@@ -56,23 +80,35 @@ function slotName(fieldKey: string) {
 }
 
 function fieldStyle(field: FormFieldConfig): CSSProperties {
-  const layout = field.layout || { x: 0, y: field.order ?? field.columnOrder ?? 0, w: 12, h: 1 };
+  const layout = normalizeConfiguredFieldLayout(field.layout, field.order ?? field.columnOrder ?? 0);
+  const x = toFormLayoutRenderTrack(layout.x || 0);
+  const w = Math.max(FORM_LAYOUT_GRID_PRECISION, toFormLayoutRenderTrack(layout.w || 12));
   return {
-    gridColumn: `${Math.max(1, (layout.x || 0) + 1)} / span ${Math.min(24, Math.max(1, layout.w || 12))}`,
+    gridColumn: `${Math.max(1, x + 1)} / span ${Math.min(FORM_LAYOUT_RENDER_COLUMNS, w)}`,
     gridRow: `${Math.max(1, (layout.y || 0) + 1)} / span ${Math.max(1, layout.h || 1)}`,
+    paddingLeft: (layout.x || 0) > 0 ? '8px' : undefined,
+    paddingRight: (layout.x || 0) + (layout.w || 12) < FORM_LAYOUT_GRID_COLUMNS ? '8px' : undefined,
   };
+}
+
+function humanizeFieldKey(fieldKey: string) {
+  return fieldKey
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[-_]/g, ' ')
+    .trim();
 }
 </script>
 
 <style scoped>
 .configured-form-layout {
   display: grid;
-  grid-template-columns: repeat(24, minmax(0, 1fr));
+  grid-template-columns: repeat(240, minmax(0, 1fr));
   grid-auto-rows: minmax(56px, auto);
-  gap: 0 16px;
+  gap: 0;
 }
 
 .configured-form-layout__cell {
+  box-sizing: border-box;
   min-width: 0;
 }
 </style>

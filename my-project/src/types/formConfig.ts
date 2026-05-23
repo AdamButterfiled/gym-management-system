@@ -120,10 +120,14 @@ export interface FormConfigTargetSourceSignature {
   baseColumnsBinding?: string;
   modalBinding?: string;
   modalTitleBinding?: string;
+  modalPreviewTitle?: string;
+  modalWidth?: string;
+  modalBodyStyle?: string;
   formLayout?: string;
   formClass?: string;
   formLabelSpan?: string;
   formWrapperSpan?: string;
+  formLayoutSource?: 'configured-layout' | 'native-form' | 'row-col-form' | string;
   titleCandidate?: string;
   detectedBy?: string;
 }

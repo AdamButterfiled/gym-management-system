@@ -118,6 +118,8 @@
         :wrapper-col="{ span: 16 }"
         class="workspace-modal-form menu-config-form"
       >
+        <ConfiguredFormLayout :fields="primaryFormFields">
+          <template #field-parentId>
          <a-form-item label="父级菜单">
              <!-- 使用 TreeSelect 实现树形选择 -->
              <a-tree-select
@@ -132,23 +134,33 @@
              >
              </a-tree-select>
          </a-form-item>
+          </template>
 
+          <template #field-title>
          <a-form-item label="菜单标题">
              <StandardInput v-model:value="formState.title" placeholder="如: 用户管理" variant="grey" class="modal-input-unified" />
          </a-form-item>
+          </template>
 
+          <template #field-name>
          <a-form-item label="路由Name">
              <StandardInput v-model:value="formState.name" placeholder="如: UserList (对应前端路由配置)" variant="grey" class="modal-input-unified" />
          </a-form-item>
+          </template>
 
+          <template #field-path>
          <a-form-item label="路由Path">
              <StandardInput v-model:value="formState.path" placeholder="如: /user 或 /sys/menu" variant="grey" class="modal-input-unified" />
          </a-form-item>
+          </template>
 
+          <template #field-component>
          <a-form-item label="组件路径">
              <StandardInput v-model:value="formState.component" placeholder="如: gym/UserList (src/views下的路径)" variant="grey" class="modal-input-unified" />
          </a-form-item>
+          </template>
 
+          <template #field-icon>
          <a-form-item label="图标">
              <!-- 图标选择器 -->
              <a-select
@@ -164,7 +176,9 @@
                 </a-select-option>
              </a-select>
          </a-form-item>
+          </template>
 
+          <template #field-componentStyle>
          <!-- 新增：表格样式配置 -->
          <a-form-item label="表格样式" :extra="isGlobalTraditional ? '经典风格下此选项已禁用，页面使用统一页壳外观' : '子菜单优先于父菜单配置'">
              <a-tooltip :title="isGlobalTraditional ? '当前为经典风格，表格将跟随统一的经典页面风格' : ''">
@@ -175,11 +189,15 @@
                </a-radio-group>
              </a-tooltip>
          </a-form-item>
+          </template>
 
+          <template #field-sort>
          <a-form-item label="排序">
              <a-input-number v-model:value="formState.sort" class="modal-input-unified" />
          </a-form-item>
+          </template>
 
+          <template #field-roles>
          <a-form-item label="权限角色">
               <a-checkbox-group v-model:value="selectedRoles" data-field-key="roles">
                   <a-checkbox value="ADMIN">管理员</a-checkbox>
@@ -188,6 +206,8 @@
                   <a-checkbox value="MEMBER">会员</a-checkbox>
               </a-checkbox-group>
          </a-form-item>
+          </template>
+        </ConfiguredFormLayout>
       </a-form>
     </StandardModal>
   </div>
@@ -213,6 +233,8 @@ import StandardButton from '@/components/common/StandardButton.vue';
 import StandardInput from '@/components/common/StandardInput.vue';
 import StandardTable from '@/components/common/StandardTable.vue';
 import StandardModal from '@/components/common/StandardModal.vue';
+import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
+import { useConfiguredTablePage } from '@/composables/useConfiguredTablePage';
 
 // 图标映射表
 const iconMap: Record<string, any> = {
@@ -257,6 +279,7 @@ const allIds = ref<number[]>([]);
 
 // Page Style Hook
 const { currentStyle, loadMenuConfig } = usePageStyle();
+const { primaryFormFields, ensureConfig } = useConfiguredTablePage<Menu>({ routePath: '/sys/menu' });
 
 // Global theme
 const __store = useStore();
@@ -444,6 +467,7 @@ const handleModalOk = () => {
 
 onMounted(() => {
     loadMenuConfig(); // Load config for page style
+    ensureConfig();
     loadData();
 });
 </script>
@@ -1106,6 +1130,6 @@ onMounted(() => {
  }
 
 html.dark .menu-list-page :deep(.transparent-glass-mode .ant-table-cell-fix-right) {
-     background: rgba(18, 18, 18, 0.55) !important;
+     background: #111111 !important;
  }
 </style>

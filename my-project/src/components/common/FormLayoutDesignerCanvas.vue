@@ -18,107 +18,100 @@
       </div>
     </div>
 
-    <section class="form-layout-designer__shell">
+    <section
+      class="form-layout-designer__shell"
+      :class="{ 'form-layout-designer__shell--modal': isModalPreview }"
+      :style="modalShellStyle"
+    >
+      <div v-if="isModalPreview" class="form-layout-designer__modal-header">
+        <h3>{{ resolvedPreviewTitle }}</h3>
+        <button type="button" class="form-layout-designer__modal-close" aria-label="关闭预览">
+          <CloseOutlined />
+        </button>
+      </div>
+
       <a-form
         :layout="resolvedLayoutMode"
         :label-col="resolvedLabelCol"
         :wrapper-col="resolvedWrapperCol"
         :class="['workspace-modal-form', 'form-layout-designer__form', normalizedFormClass]"
+        :style="modalBodyStyle"
       >
         <div class="form-layout-designer__canvas">
-          <template v-if="rows.length">
-            <template v-for="(row, rowIndex) in rows" :key="row.rowKey">
-              <div
-                class="form-layout-designer__row-gap"
-                :class="{ 'form-layout-designer__row-gap--active': isGapActive(rowIndex) }"
-                data-drop-kind="gap"
-                :data-row-index="rowIndex"
-                @dragover.prevent="handleGapDragOver(rowIndex)"
-                @drop.prevent="handleGapDrop(rowIndex)"
-              >
-                <span>拖到这里会新起一行</span>
-              </div>
-
-              <section
-                class="form-layout-designer__row"
-                :class="{ 'form-layout-designer__row--active': isRowActive(rowIndex) }"
-                data-drop-kind="row"
-                :data-row-index="rowIndex"
-                @dragover.prevent="handleRowDragOver(rowIndex)"
-                @drop.prevent="handleRowDrop(rowIndex)"
-              >
-                <article
-                  v-for="(field, fieldIndex) in row.fields"
-                  :key="field.fieldKey"
-                  class="form-layout-designer__item"
-                  :class="{
-                    'form-layout-designer__item--selected': field.fieldKey === selectedFieldKey,
-                    'form-layout-designer__item--hidden': !isFieldVisible(field),
-                    'form-layout-designer__item--insert-before': isInsertBefore(rowIndex, fieldIndex),
-                    'form-layout-designer__item--insert-after': isInsertAfter(rowIndex, fieldIndex),
-                  }"
-                  :style="itemStyle(field)"
-                  data-drop-kind="item"
-                  :data-field-key="field.fieldKey || ''"
-                  :data-row-index="rowIndex"
-                  :data-field-index="fieldIndex"
-                  @pointerdown="handleItemPointerDown(field.fieldKey, $event)"
-                  @click.stop="selectField(field.fieldKey)"
-                  @dragover.prevent.stop="handleItemDragOver(rowIndex, fieldIndex, $event)"
-                  @drop.prevent.stop="handleItemDrop(rowIndex, fieldIndex, $event)"
-                >
-                  <div class="form-layout-designer__item-tools">
-                    <button
-                      type="button"
-                      class="designer-chip designer-chip--ghost designer-chip--drag"
-                      :data-field-key="field.fieldKey || ''"
-                      @pointerdown.stop.prevent="startPointerDrag(field.fieldKey, $event)"
-                    >
-                      拖拽
-                    </button>
-                    <button type="button" class="designer-chip designer-chip--ghost" data-no-drag="true" @click.stop="$emit('edit', field)">
-                      编辑
-                    </button>
-                  </div>
-
-                  <div class="form-layout-designer__preview">
-                    <FormFieldPreviewRenderer :field="field" :height="getLayout(field).h" />
-                  </div>
-
-                  <button
-                    type="button"
-                    class="form-layout-designer__resize-edge"
-                    data-no-drag="true"
-                    @pointerdown.stop.prevent="startResize(field, rowIndex, 'width', $event)"
-                  />
-
-                  <button
-                    type="button"
-                    class="form-layout-designer__resize"
-                    data-no-drag="true"
-                    @pointerdown.stop.prevent="startResize(field, rowIndex, 'both', $event)"
-                  />
-                </article>
-              </section>
-            </template>
-
-            <div
-              class="form-layout-designer__row-gap"
-              :class="{ 'form-layout-designer__row-gap--active': isGapActive(rows.length) }"
-              data-drop-kind="gap"
-              :data-row-index="rows.length"
-              @dragover.prevent="handleGapDragOver(rows.length)"
-              @drop.prevent="handleGapDrop(rows.length)"
+          <ConfiguredFormLayout
+            v-if="orderedFields.length"
+            :fields="orderedFields"
+            include-hidden
+            class="form-layout-designer__configured-layout"
+          >
+            <template
+              v-for="field in orderedFields"
+              :key="field.fieldKey"
+              #[fieldSlotName(field.fieldKey)]
             >
-              <span>拖到这里会排在最后一行</span>
-            </div>
-          </template>
+              <article
+                class="form-layout-designer__item"
+                :class="{
+                  'form-layout-designer__item--selected': field.fieldKey === selectedFieldKey,
+                  'form-layout-designer__item--hidden': !isFieldVisible(field),
+                  'form-layout-designer__item--insert-before': isInsertBefore(fieldRowArrayIndex(field), fieldIndexInRow(field)),
+                  'form-layout-designer__item--insert-after': isInsertAfter(fieldRowArrayIndex(field), fieldIndexInRow(field)),
+                  'form-layout-designer__item--new-row-before': isNewRowBefore(fieldRowArrayIndex(field)),
+                  'form-layout-designer__item--new-row-after': isNewRowAfter(fieldRowArrayIndex(field)),
+                }"
+                data-drop-kind="item"
+                :data-field-key="field.fieldKey || ''"
+                :data-row-index="fieldRowArrayIndex(field)"
+                :data-field-index="fieldIndexInRow(field)"
+                @click.stop="selectField(field.fieldKey)"
+                @dragover.prevent.stop="handleItemDragOver(fieldRowArrayIndex(field), fieldIndexInRow(field), $event)"
+                @drop.prevent.stop="handleItemDrop(fieldRowArrayIndex(field), fieldIndexInRow(field), $event)"
+              >
+                <div class="form-layout-designer__item-tools">
+                  <button
+                    type="button"
+                    class="designer-chip designer-chip--ghost designer-chip--drag"
+                    :data-field-key="field.fieldKey || ''"
+                    @pointerdown.stop.prevent="startPointerDrag(field.fieldKey, $event)"
+                  >
+                    拖拽
+                  </button>
+                  <button type="button" class="designer-chip designer-chip--ghost" data-no-drag="true" @click.stop="$emit('edit', field)">
+                    编辑
+                  </button>
+                </div>
+
+                <div class="form-layout-designer__preview">
+                  <FormFieldPreviewRenderer :field="field" :height="getLayout(field).h" />
+                </div>
+
+                <button
+                  type="button"
+                  class="form-layout-designer__resize-edge"
+                  data-no-drag="true"
+                  @pointerdown.stop.prevent="startResize(field, fieldRowArrayIndex(field), 'width', $event)"
+                />
+
+                <button
+                  type="button"
+                  class="form-layout-designer__resize"
+                  data-no-drag="true"
+                  @pointerdown.stop.prevent="startResize(field, fieldRowArrayIndex(field), 'both', $event)"
+                />
+              </article>
+            </template>
+          </ConfiguredFormLayout>
 
           <div v-else class="form-layout-designer__empty">
             当前目标还没有字段。新增字段后就会在这里按真实表单样式预览。
           </div>
         </div>
       </a-form>
+
+      <div v-if="isModalPreview" class="form-layout-designer__modal-footer">
+        <StandardButton type="default">取消</StandardButton>
+        <StandardButton type="primary">确定</StandardButton>
+      </div>
     </section>
 
     <div
@@ -134,13 +127,21 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watchEffect } from 'vue';
 import type { CSSProperties } from 'vue';
+import { CloseOutlined } from '@ant-design/icons-vue';
 import FormFieldPreviewRenderer from '@/components/common/FormFieldPreviewRenderer.vue';
+import ConfiguredFormLayout from '@/components/common/ConfiguredFormLayout.vue';
+import StandardButton from '@/components/common/StandardButton.vue';
 import type { FormFieldConfig, FormFieldLayout } from '@/types/formConfig';
+import { normalizeConfiguredFormFields } from '@/utils/formLayoutRuntime';
 
 const FORM_GRID_COLUMNS = 24;
-const FORM_MIN_HEIGHT = 74;
+const FORM_GRID_PRECISION = 10;
+const FORM_MIN_FIELD_WIDTH = 1;
 const FORM_HEIGHT_UNIT = 82;
-const FORM_HEIGHT_STEP = 88;
+const DRAG_START_THRESHOLD = 6;
+const NEW_ROW_DROP_ZONE_RATIO = 0.24;
+const MODAL_HORIZONTAL_MIN_FIELD_WIDTH = 10;
+const MODAL_HORIZONTAL_MAX_FIELDS_PER_ROW = 2;
 
 type DropState =
   | { kind: 'gap'; rowIndex: number }
@@ -156,12 +157,18 @@ interface DesignerRow {
 const props = withDefaults(defineProps<{
   fields: FormFieldConfig[];
   title?: string;
+  targetType?: string;
+  modalWidth?: number | string | null;
+  modalBodyStyle?: string;
   layoutMode?: string;
   formClass?: string;
   labelColSpan?: number | string | null;
   wrapperColSpan?: number | string | null;
 }>(), {
   title: '',
+  targetType: '',
+  modalWidth: null,
+  modalBodyStyle: '',
   layoutMode: 'vertical',
   formClass: '',
   labelColSpan: null,
@@ -226,6 +233,26 @@ const rows = computed<DesignerRow[]>(() => {
 
 const selectedField = computed(() => orderedFields.value.find((field) => field.fieldKey === selectedFieldKey.value) || null);
 
+const isModalPreview = computed(() => props.targetType === 'modal-form');
+
+const modalShellStyle = computed<CSSProperties | undefined>(() => {
+  if (!isModalPreview.value) {
+    return undefined;
+  }
+  const width = normalizeModalWidth(props.modalWidth);
+  return width ? { width: `min(100%, ${width})` } : undefined;
+});
+
+const modalBodyStyle = computed<CSSProperties | undefined>(() => {
+  if (!isModalPreview.value) {
+    return undefined;
+  }
+  return {
+    padding: '20px 28px 0',
+    ...toStyleObject(props.modalBodyStyle || ''),
+  };
+});
+
 const hasHorizontalGrid = computed(() => {
   const labelSpan = toPositiveNumber(props.labelColSpan);
   const wrapperSpan = toPositiveNumber(props.wrapperColSpan);
@@ -243,6 +270,17 @@ const resolvedLayoutMode = computed(() => {
 });
 
 const normalizedFormClass = computed(() => String(props.formClass || '').trim());
+
+const resolvedPreviewTitle = computed(() => {
+  const title = String(props.title || '').trim();
+  if (normalizedFormClass.value.includes('menu-config-form') && (!title || title === 'modalTitle')) {
+    return '新增顶级菜单';
+  }
+  if (!title || /(?:^|[A-Z])modalTitle$/i.test(title) || title === 'modalTitle') {
+    return '表单';
+  }
+  return title;
+});
 
 const resolvedLabelCol = computed(() => {
   if (resolvedLayoutMode.value !== 'horizontal') {
@@ -287,25 +325,13 @@ function fieldDisplayLabel(fieldKey: string) {
   return orderedFields.value.find((field) => field.fieldKey === fieldKey)?.label || fieldKey;
 }
 
-function handleItemPointerDown(fieldKey: string, event: PointerEvent) {
-  if (event.button !== 0) {
-    return;
-  }
-  const target = event.target as HTMLElement | null;
-  if (target?.closest('[data-no-drag="true"]')) {
-    return;
-  }
-  event.preventDefault();
-  const currentTarget = event.currentTarget as HTMLElement | null;
-  startPointerDrag(fieldKey || currentTarget?.dataset.fieldKey || '', event);
-}
-
 function getLayout(field: FormFieldConfig): FormFieldLayout {
   const source = field.layout;
+  const minWidth = getMinFieldWidth();
   const layout = {
-    x: clampNumber(Math.round(source?.x ?? 0), 0, FORM_GRID_COLUMNS - 1),
+    x: clampNumber(roundLayoutValue(source?.x ?? 0), 0, FORM_GRID_COLUMNS - minWidth),
     y: Math.max(0, Math.round(source?.y ?? field.order ?? field.columnOrder ?? 0)),
-    w: clampNumber(Math.round(source?.w ?? 24), 1, FORM_GRID_COLUMNS),
+    w: clampNumber(roundLayoutValue(source?.w ?? 24), minWidth, FORM_GRID_COLUMNS),
     h: clampNumber(Math.round(source?.h ?? 1), 1, 6),
   };
 
@@ -324,17 +350,27 @@ function ensureFieldLayout(field: FormFieldConfig): FormFieldLayout {
   return field.layout;
 }
 
-function itemStyle(field: FormFieldConfig): CSSProperties {
-  const layout = getLayout(field);
-  return {
-    gridColumn: `${clampNumber(layout.x + 1, 1, FORM_GRID_COLUMNS)} / span ${clampNumber(layout.w, 1, FORM_GRID_COLUMNS)}`,
-    minHeight: `${FORM_MIN_HEIGHT + (layout.h - 1) * FORM_HEIGHT_STEP}px`,
-  };
-}
-
 function layoutText(field: FormFieldConfig) {
   const layout = getLayout(field);
-  return `第 ${layout.y + 1} 行 · 宽 ${layout.w}/24 · 高 ${layout.h}`;
+  return `第 ${layout.y + 1} 行 · 宽 ${formatWidth(layout.w)}/24 · 高 ${layout.h}`;
+}
+
+function fieldSlotName(fieldKey: string) {
+  return `field-${fieldKey}`;
+}
+
+function fieldRowArrayIndex(field: FormFieldConfig) {
+  const rowIndex = rows.value.findIndex((row) => row.fields.some((item) => item.fieldKey === field.fieldKey));
+  return rowIndex === -1 ? 0 : rowIndex;
+}
+
+function fieldIndexInRow(field: FormFieldConfig) {
+  const row = rows.value[fieldRowArrayIndex(field)];
+  if (!row) {
+    return 0;
+  }
+  const fieldIndex = row.fields.findIndex((item) => item.fieldKey === field.fieldKey);
+  return fieldIndex === -1 ? 0 : fieldIndex;
 }
 
 function isFieldVisible(field: FormFieldConfig) {
@@ -394,20 +430,37 @@ function startPointerDrag(fieldKey: string, event: PointerEvent) {
   dropState.value = null;
   queuedDropState = null;
   activePointerDropState = null;
-  isPointerDragging.value = true;
 
   const dragHandle = event.currentTarget as HTMLElement | null;
-  dragHandle?.classList.add('is-dragging');
   dragHandle?.setPointerCapture?.(event.pointerId);
-  document.body.classList.add('form-layout-designer-pointer-dragging');
-  dragGhost.value = {
-    label: fieldDisplayLabel(resolvedFieldKey),
-    x: event.clientX + 14,
-    y: event.clientY + 14,
+  const startX = event.clientX;
+  const startY = event.clientY;
+  let hasStartedDrag = false;
+
+  const beginDrag = (clientX: number, clientY: number) => {
+    if (hasStartedDrag) {
+      return;
+    }
+    hasStartedDrag = true;
+    isPointerDragging.value = true;
+    dragHandle?.classList.add('is-dragging');
+    document.body.classList.add('form-layout-designer-pointer-dragging');
+    dragGhost.value = {
+      label: fieldDisplayLabel(resolvedFieldKey),
+      x: clientX + 14,
+      y: clientY + 14,
+    };
+    updateDropStateFromPointer(clientX, clientY);
   };
-  updateDropStateFromPointer(event.clientX, event.clientY);
 
   const handleMove = (moveEvent: PointerEvent) => {
+    if (!hasStartedDrag) {
+      const distance = Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY);
+      if (distance < DRAG_START_THRESHOLD) {
+        return;
+      }
+      beginDrag(moveEvent.clientX, moveEvent.clientY);
+    }
     dragGhost.value = {
       label: fieldDisplayLabel(resolvedFieldKey),
       x: moveEvent.clientX + 14,
@@ -418,11 +471,13 @@ function startPointerDrag(fieldKey: string, event: PointerEvent) {
   };
 
   const handleUp = (upEvent?: PointerEvent) => {
-    if (upEvent) {
+    if (hasStartedDrag && upEvent) {
       updateDropStateFromPointer(upEvent.clientX, upEvent.clientY);
     }
     dragHandle?.releasePointerCapture?.(event.pointerId);
-    commitPointerDrop();
+    if (hasStartedDrag) {
+      commitPointerDrop();
+    }
     window.removeEventListener('pointermove', handleMove);
     window.removeEventListener('pointerup', handleUp);
     window.removeEventListener('pointercancel', handleUp);
@@ -479,9 +534,7 @@ function updateDropStateFromPointer(clientX: number, clientY: number) {
   if (item) {
     const rowIndex = Number(item.dataset.rowIndex || 0);
     const fieldIndex = Number(item.dataset.fieldIndex || 0);
-    const rect = item.getBoundingClientRect();
-    const insertIndex = clientX < rect.left + rect.width / 2 ? fieldIndex : fieldIndex + 1;
-    setPointerDropState({ kind: 'item', rowIndex, insertIndex });
+    setPointerDropState(resolveItemDropState(rowIndex, fieldIndex, item, clientX, clientY));
     return;
   }
 
@@ -575,9 +628,7 @@ function handleItemDragOver(rowIndex: number, fieldIndex: number, event: DragEve
   if (!target) {
     return;
   }
-  const rect = target.getBoundingClientRect();
-  const insertIndex = event.clientX < rect.left + rect.width / 2 ? fieldIndex : fieldIndex + 1;
-  setPointerDropState({ kind: 'item', rowIndex, insertIndex });
+  setPointerDropState(resolveItemDropState(rowIndex, fieldIndex, target, event.clientX, event.clientY));
 }
 
 function handleItemDrop(rowIndex: number, fieldIndex: number, event: DragEvent) {
@@ -588,9 +639,12 @@ function handleItemDrop(rowIndex: number, fieldIndex: number, event: DragEvent) 
   if (!target) {
     return;
   }
-  const rect = target.getBoundingClientRect();
-  const insertIndex = event.clientX < rect.left + rect.width / 2 ? fieldIndex : fieldIndex + 1;
-  moveFieldToRow(dragFieldKey.value, rowIndex, insertIndex);
+  const nextDropState = resolveItemDropState(rowIndex, fieldIndex, target, event.clientX, event.clientY);
+  if (nextDropState.kind === 'gap') {
+    moveFieldToNewRow(dragFieldKey.value, nextDropState.rowIndex);
+  } else {
+    moveFieldToRow(dragFieldKey.value, nextDropState.rowIndex, nextDropState.insertIndex);
+  }
   handleDragEnd();
 }
 
@@ -608,6 +662,85 @@ function isInsertBefore(rowIndex: number, fieldIndex: number) {
 
 function isInsertAfter(rowIndex: number, fieldIndex: number) {
   return dropState.value?.kind === 'item' && dropState.value.rowIndex === rowIndex && dropState.value.insertIndex === fieldIndex + 1;
+}
+
+function resolveItemDropState(
+  rowIndex: number,
+  fieldIndex: number,
+  itemElement: HTMLElement,
+  clientX: number,
+  clientY: number
+): DropState {
+  const rowRect = getRowClientRect(rowIndex) || itemElement.getBoundingClientRect();
+  const verticalRatio = rowRect.height > 0 ? (clientY - rowRect.top) / rowRect.height : 0.5;
+  if (verticalRatio <= NEW_ROW_DROP_ZONE_RATIO) {
+    return { kind: 'gap', rowIndex };
+  }
+  if (verticalRatio >= 1 - NEW_ROW_DROP_ZONE_RATIO) {
+    return { kind: 'gap', rowIndex: rowIndex + 1 };
+  }
+
+  return {
+    kind: 'item',
+    rowIndex,
+    insertIndex: resolveInsertIndex(rowIndex, fieldIndex, itemElement, clientX),
+  };
+}
+
+function resolveInsertIndex(rowIndex: number, fieldIndex: number, itemElement: HTMLElement, clientX: number) {
+  const rowItems = getRowItemElements(rowIndex);
+  if (!rowItems.length) {
+    const rect = itemElement.getBoundingClientRect();
+    return clientX < rect.left + rect.width / 2 ? fieldIndex : fieldIndex + 1;
+  }
+
+  const orderedItems = rowItems.sort((left, right) => {
+    const leftIndex = Number(left.dataset.fieldIndex || 0);
+    const rightIndex = Number(right.dataset.fieldIndex || 0);
+    return leftIndex - rightIndex;
+  });
+
+  for (let index = 0; index < orderedItems.length; index += 1) {
+    const rect = orderedItems[index].getBoundingClientRect();
+    if (clientX < rect.left + rect.width / 2) {
+      return index;
+    }
+  }
+  return orderedItems.length;
+}
+
+function getRowClientRect(rowIndex: number) {
+  const rowItems = getRowItemElements(rowIndex);
+  if (!rowItems.length) {
+    return null;
+  }
+  const rects = rowItems.map((item) => item.getBoundingClientRect());
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
+function getRowItemElements(rowIndex: number) {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(`.form-layout-designer__item[data-row-index="${rowIndex}"]`)
+  );
+}
+
+function isNewRowBefore(rowIndex: number) {
+  return dropState.value?.kind === 'gap' && dropState.value.rowIndex === rowIndex;
+}
+
+function isNewRowAfter(rowIndex: number) {
+  return dropState.value?.kind === 'gap' && dropState.value.rowIndex === rowIndex + 1;
 }
 
 function moveFieldToNewRow(fieldKey: string, rowIndex: number) {
@@ -654,6 +787,14 @@ function moveFieldToRow(fieldKey: string, rowIndex: number, insertIndex: number)
     safeInsertIndex -= 1;
   }
 
+  const maxFields = getMaxFieldsPerRow();
+  if (!(result.sourceRowIndex === targetRowIndex) && targetRow.length >= maxFields) {
+    rowGroups.splice(targetRowIndex + 1, 0, [result.field]);
+    applyRows(rowGroups, previousMeta);
+    selectField(fieldKey);
+    return;
+  }
+
   targetRow.splice(safeInsertIndex, 0, result.field);
   rowGroups[targetRowIndex] = targetRow;
   applyRows(rowGroups, previousMeta);
@@ -661,60 +802,39 @@ function moveFieldToRow(fieldKey: string, rowIndex: number, insertIndex: number)
 }
 
 function stabilizeRowLayouts() {
-  const grouped = new Map<number, FormFieldConfig[]>();
+  const normalizedByKey = new Map(
+    normalizeConfiguredFormFields(orderedFields.value, { includeHidden: true }).map((field, index) => [
+      field.fieldKey,
+      {
+        layout: getLayout({ ...field, order: index, columnOrder: index }),
+        order: field.order ?? index,
+        columnOrder: field.columnOrder ?? field.order ?? index,
+      },
+    ]),
+  );
+
   orderedFields.value.forEach((field) => {
-    const layout = getLayout(field);
-    const rowFields = grouped.get(layout.y) || [];
-    rowFields.push(field);
-    grouped.set(layout.y, rowFields);
+    const normalized = normalizedByKey.get(field.fieldKey);
+    if (!normalized) {
+      return;
+    }
+    if (!field.layout || isLayoutDifferent(field.layout, normalized.layout)) {
+      field.layout = normalized.layout;
+    }
+    if ((field.order ?? normalized.order) !== normalized.order) {
+      field.order = normalized.order;
+    }
+    if ((field.columnOrder ?? normalized.columnOrder) !== normalized.columnOrder) {
+      field.columnOrder = normalized.columnOrder;
+    }
   });
+}
 
-  [...grouped.entries()]
-    .sort((left, right) => left[0] - right[0])
-    .forEach(([originalRowIndex, group], normalizedRowIndex) => {
-      const sortedGroup = [...group].sort((left, right) => {
-        const leftLayout = getLayout(left);
-        const rightLayout = getLayout(right);
-        if (leftLayout.x !== rightLayout.x) {
-          return leftLayout.x - rightLayout.x;
-        }
-        return (left.order ?? left.columnOrder ?? 0) - (right.order ?? right.columnOrder ?? 0);
-      });
-      const rowHeight = Math.max(1, ...sortedGroup.map((field) => getLayout(field).h));
-      const needsRepair = rowNeedsRepair(sortedGroup, originalRowIndex, normalizedRowIndex);
-      const repairedWidths = needsRepair ? normalizeRowWidths(sortedGroup.map((field) => getLayout(field).w), sortedGroup.length) : [];
-      let cursor = 0;
-
-      sortedGroup.forEach((field, fieldIndex) => {
-        const currentLayout = getLayout(field);
-        const nextLayout = needsRepair
-          ? {
-              x: cursor,
-              y: normalizedRowIndex,
-              w: repairedWidths[fieldIndex],
-              h: rowHeight,
-            }
-          : {
-              x: currentLayout.x,
-              y: normalizedRowIndex,
-              w: currentLayout.w,
-              h: rowHeight,
-            };
-        const nextOrder = normalizedRowIndex * 100 + fieldIndex;
-
-        if (!field.layout || isLayoutDifferent(field.layout, nextLayout)) {
-          field.layout = nextLayout;
-        }
-        if ((field.order ?? nextOrder) !== nextOrder) {
-          field.order = nextOrder;
-        }
-        if ((field.columnOrder ?? nextOrder) !== nextOrder) {
-          field.columnOrder = nextOrder;
-        }
-
-        cursor += nextLayout.w;
-      });
-    });
+function shouldResetBrokenModalRow(group: FormFieldConfig[]) {
+  if (!isModalPreview.value || resolvedLayoutMode.value !== 'horizontal') {
+    return false;
+  }
+  return group.length > getMaxFieldsPerRow();
 }
 
 function rowNeedsRepair(group: FormFieldConfig[], originalRowIndex: number, normalizedRowIndex: number) {
@@ -726,15 +846,16 @@ function rowNeedsRepair(group: FormFieldConfig[], originalRowIndex: number, norm
   }
 
   let cursor = 0;
+  const minWidth = getMinFieldWidth(group.length);
   for (let index = 0; index < group.length; index += 1) {
     const layout = getLayout(group[index]);
-    if (layout.x < 0 || layout.w < 1 || layout.x + layout.w > FORM_GRID_COLUMNS) {
+    if (layout.x < 0 || layout.w < minWidth || layout.x + layout.w > FORM_GRID_COLUMNS + 0.0001) {
       return true;
     }
-    if (index > 0 && layout.x < cursor) {
+    if (index > 0 && layout.x < cursor - 0.0001) {
       return true;
     }
-    cursor = Math.max(cursor, layout.x) + layout.w;
+    cursor = roundLayoutValue(Math.max(cursor, layout.x) + layout.w);
   }
 
   return false;
@@ -756,19 +877,20 @@ function applyRows(rowGroups: FormFieldConfig[][], previousMeta: Array<{ keySet:
       group.length
     );
     const rowHeight = Math.max(1, ...group.map((field) => getLayout(field).h));
+    const rowMinWidth = getMinFieldWidth(group.length);
 
     let cursor = 0;
     group.forEach((field, fieldIndex) => {
-      const width = widths[fieldIndex];
+      const width = Math.max(rowMinWidth, widths[fieldIndex]);
       field.layout = {
-        x: cursor,
+        x: roundLayoutValue(cursor),
         y: rowIndex,
         w: width,
         h: rowHeight,
       };
       field.order = rowIndex * 100 + fieldIndex;
       field.columnOrder = field.order;
-      cursor += width;
+      cursor = roundLayoutValue(cursor + width);
     });
   });
 }
@@ -790,21 +912,23 @@ function startResize(field: FormFieldConfig, rowIndex: number, mode: 'width' | '
   const startLayout = { ...ensureFieldLayout(field) };
   const startX = event.clientX;
   const startY = event.clientY;
-  const rowElement = (event.currentTarget as HTMLElement | null)?.closest('.form-layout-designer__row') as HTMLElement | null;
-  if (!rowElement) {
+  const layoutElement = (event.currentTarget as HTMLElement | null)?.closest('.form-layout-designer__configured-layout') as HTMLElement | null;
+  if (!layoutElement) {
     return;
   }
 
-  const rowWidth = rowElement.getBoundingClientRect().width;
+  const rowWidth = layoutElement.getBoundingClientRect().width;
   const columnWidth = Math.max(1, rowWidth / FORM_GRID_COLUMNS);
   const startRowFields = [...row.fields];
   const otherFields = startRowFields.filter((item) => item.fieldKey !== field.fieldKey);
   const startRowHeight = Math.max(1, ...startRowFields.map((item) => getLayout(item).h));
+  const rowMinWidth = getMinFieldWidth(startRowFields.length);
   const resizeHandle = event.currentTarget as HTMLElement | null;
   resizeHandle?.setPointerCapture?.(event.pointerId);
+  document.body.classList.add('form-layout-designer-pointer-resizing');
 
   const handleMove = (moveEvent: PointerEvent) => {
-    const deltaColumns = Math.round((moveEvent.clientX - startX) / columnWidth);
+    const deltaColumns = roundLayoutValue((moveEvent.clientX - startX) / columnWidth);
     const deltaRows = mode === 'both' ? Math.round((moveEvent.clientY - startY) / FORM_HEIGHT_UNIT) : 0;
     const nextHeight = clampNumber(startRowHeight + deltaRows, 1, 6);
 
@@ -812,7 +936,7 @@ function startResize(field: FormFieldConfig, rowIndex: number, mode: 'width' | '
       field.layout = {
         x: 0,
         y: getLayout(field).y,
-        w: clampNumber(startLayout.w + deltaColumns, 1, FORM_GRID_COLUMNS),
+        w: clampNumber(roundLayoutValue(startLayout.w + deltaColumns), rowMinWidth, FORM_GRID_COLUMNS),
         h: nextHeight,
       };
       field.order = rowIndex * 100;
@@ -820,8 +944,12 @@ function startResize(field: FormFieldConfig, rowIndex: number, mode: 'width' | '
       return;
     }
 
-    const minWidthForOthers = otherFields.length;
-    const nextWidth = clampNumber(startLayout.w + deltaColumns, 1, FORM_GRID_COLUMNS - minWidthForOthers);
+    const minWidthForOthers = otherFields.length * rowMinWidth;
+    const nextWidth = clampNumber(
+      roundLayoutValue(startLayout.w + deltaColumns),
+      rowMinWidth,
+      FORM_GRID_COLUMNS - minWidthForOthers
+    );
     const remaining = FORM_GRID_COLUMNS - nextWidth;
     const siblingWidths = distributeWidth(
       remaining,
@@ -832,23 +960,23 @@ function startResize(field: FormFieldConfig, rowIndex: number, mode: 'width' | '
     startRowFields.forEach((item) => {
       if (item.fieldKey === field.fieldKey) {
         item.layout = {
-          x: cursor,
+          x: roundLayoutValue(cursor),
           y: rowIndex,
           w: nextWidth,
           h: nextHeight,
         };
-        cursor += nextWidth;
+        cursor = roundLayoutValue(cursor + nextWidth);
         return;
       }
 
-      const width = siblingWidths.shift() || 1;
+      const width = siblingWidths.shift() || rowMinWidth;
       item.layout = {
-        x: cursor,
+        x: roundLayoutValue(cursor),
         y: rowIndex,
         w: width,
         h: nextHeight,
       };
-      cursor += width;
+      cursor = roundLayoutValue(cursor + width);
     });
 
     startRowFields.forEach((item, index) => {
@@ -862,6 +990,7 @@ function startResize(field: FormFieldConfig, rowIndex: number, mode: 'width' | '
     window.removeEventListener('pointerup', handleUp);
     window.removeEventListener('pointercancel', handleUp);
     resizeHandle?.releasePointerCapture?.(event.pointerId);
+    document.body.classList.remove('form-layout-designer-pointer-resizing');
     resizeCleanup = null;
   };
 
@@ -890,93 +1019,50 @@ function buildEqualSpans(count: number) {
   if (count <= 0) {
     return [];
   }
-  if (count >= FORM_GRID_COLUMNS) {
-    return Array.from({ length: count }, () => 1);
-  }
-  const base = Math.floor(FORM_GRID_COLUMNS / count);
-  const remainder = FORM_GRID_COLUMNS % count;
-  return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
+  return fitRoundedWidths(Array.from({ length: count }, () => FORM_GRID_COLUMNS / count), FORM_GRID_COLUMNS);
 }
 
 function normalizeRowWidths(widths: number[], count: number) {
   if (!count) {
     return [];
   }
-  if (count >= FORM_GRID_COLUMNS) {
-    return Array.from({ length: count }, () => 1);
-  }
 
   const normalized = [...widths];
+  const minWidth = getMinFieldWidth(count);
   while (normalized.length < count) {
-    normalized.push(1);
+    normalized.push(minWidth);
   }
   normalized.length = count;
 
-  const result = normalized.map((width) => clampNumber(Math.round(width || 1), 1, FORM_GRID_COLUMNS - (count - 1)));
-  let total = result.reduce((sum, width) => sum + width, 0);
-
-  if (total < FORM_GRID_COLUMNS) {
-    let remainder = FORM_GRID_COLUMNS - total;
-    let cursor = 0;
-    while (remainder > 0) {
-      result[cursor % result.length] += 1;
-      remainder -= 1;
-      cursor += 1;
-    }
-    return result;
-  }
-
-  while (total > FORM_GRID_COLUMNS) {
-    let changed = false;
-    for (let index = result.length - 1; index >= 0 && total > FORM_GRID_COLUMNS; index -= 1) {
-      if (result[index] > 1) {
-        result[index] -= 1;
-        total -= 1;
-        changed = true;
-      }
-    }
-    if (!changed) {
-      break;
-    }
-  }
-  return result;
+  return distributeWidth(FORM_GRID_COLUMNS, normalized);
 }
 
 function distributeWidth(total: number, preferred: number[]) {
   if (!preferred.length) {
     return [];
   }
-  if (preferred.length >= total) {
-    return Array.from({ length: preferred.length }, () => 1);
+  const safeTotal = Math.max(0, roundLayoutValue(total));
+  if (!safeTotal) {
+    return Array.from({ length: preferred.length }, () => 0);
+  }
+  const minWidth = Math.min(getMinFieldWidth(preferred.length), safeTotal / preferred.length);
+  const minTotal = minWidth * preferred.length;
+  if (minTotal >= safeTotal) {
+    return fitRoundedWidths(Array.from({ length: preferred.length }, () => safeTotal / preferred.length), safeTotal);
   }
 
-  const safePreferred = preferred.map((value) => Math.max(1, Math.round(value || 1)));
-  const base = Array.from({ length: preferred.length }, () => 1);
-  let remaining = total - preferred.length;
-  if (remaining <= 0) {
-    return base;
-  }
-
-  const weightSum = safePreferred.reduce((sum, value) => sum + value, 0);
-  const fractions: Array<{ index: number; fraction: number }> = [];
-  safePreferred.forEach((value, index) => {
-    const raw = (remaining * value) / weightSum;
-    const whole = Math.floor(raw);
-    base[index] += whole;
-    remaining -= whole;
-    fractions.push({ index, fraction: raw - whole });
+  const safePreferred = preferred.map((value) => Math.max(minWidth, Number.isFinite(value) ? value : minWidth));
+  const flexible = safePreferred.map((value) => Math.max(0, value - minWidth));
+  const flexibleSum = flexible.reduce((sum, value) => sum + value, 0);
+  const distributable = safeTotal - minTotal;
+  const nextWidths = safePreferred.map((_, index) => {
+    if (flexibleSum <= 0) {
+      return minWidth + distributable / safePreferred.length;
+    }
+    return minWidth + (distributable * flexible[index]) / flexibleSum;
   });
 
-  fractions
-    .sort((left, right) => right.fraction - left.fraction)
-    .forEach((item) => {
-      if (remaining > 0) {
-        base[item.index] += 1;
-        remaining -= 1;
-      }
-    });
-
-  return normalizeRowWidths(base, preferred.length);
+  return fitRoundedWidths(nextWidths, safeTotal);
 }
 
 function signatureBySet(fields: FormFieldConfig[]) {
@@ -1024,6 +1110,73 @@ function toPositiveNumber(value: number | string | null | undefined) {
   return numeric;
 }
 
+function normalizeModalWidth(value: number | string | null | undefined) {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return `${value}px`;
+  }
+  const raw = String(value || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!raw) {
+    return '';
+  }
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    return `${raw}px`;
+  }
+  if (/^\d+(\.\d+)?(px|%)$/.test(raw)) {
+    return raw;
+  }
+  return '';
+}
+
+function toStyleObject(styleText: string): CSSProperties {
+  const styleObject: CSSProperties = {};
+  String(styleText || '')
+    .split(';')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((declaration) => {
+      const [rawKey, ...valueParts] = declaration.split(':');
+      if (!rawKey || !valueParts.length) {
+        return;
+      }
+      const key = rawKey
+        .trim()
+        .replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase()) as keyof CSSProperties;
+      styleObject[key] = valueParts.join(':').trim() as never;
+    });
+  return styleObject;
+}
+
+function getMaxFieldsPerRow() {
+  return isModalPreview.value && resolvedLayoutMode.value === 'horizontal'
+    ? MODAL_HORIZONTAL_MAX_FIELDS_PER_ROW
+    : Number.MAX_SAFE_INTEGER;
+}
+
+function getMinFieldWidth(rowFieldCount = 1) {
+  if (isModalPreview.value && resolvedLayoutMode.value === 'horizontal') {
+    return Math.min(MODAL_HORIZONTAL_MIN_FIELD_WIDTH, FORM_GRID_COLUMNS / Math.max(1, rowFieldCount));
+  }
+  return FORM_MIN_FIELD_WIDTH;
+}
+
+function formatWidth(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '');
+}
+
+function roundLayoutValue(value: number) {
+  return Math.round((Number.isFinite(value) ? value : 0) * FORM_GRID_PRECISION) / FORM_GRID_PRECISION;
+}
+
+function fitRoundedWidths(widths: number[], total = FORM_GRID_COLUMNS) {
+  const rounded = widths.map((width) => roundLayoutValue(Math.max(0, width)));
+  if (!rounded.length) {
+    return [];
+  }
+  const diff = roundLayoutValue(total - rounded.reduce((sum, width) => sum + width, 0));
+  rounded[rounded.length - 1] = roundLayoutValue(Math.max(0, rounded[rounded.length - 1] + diff));
+  return rounded;
+}
+
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
 }
@@ -1038,6 +1191,12 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 .form-layout-designer--dragging {
+  user-select: none;
+}
+
+:global(body.form-layout-designer-pointer-resizing),
+:global(body.form-layout-designer-pointer-resizing *) {
+  cursor: ew-resize !important;
   user-select: none;
 }
 
@@ -1138,8 +1297,66 @@ function clampNumber(value: number, min: number, max: number) {
   background: #ffffff;
 }
 
+.form-layout-designer__shell--modal {
+  width: min(100%, 600px);
+  margin: 16px auto 0;
+  overflow: hidden;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.form-layout-designer__modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 28px 28px 0;
+}
+
+.form-layout-designer__modal-header h3 {
+  margin: 0;
+  color: #111111;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.form-layout-designer__modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--mono-radius-sm);
+  background: transparent;
+  color: rgba(17, 17, 17, 0.42);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.form-layout-designer__modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px 28px 28px;
+}
+
+.form-layout-designer__modal-footer :deep(.std-button) {
+  min-width: 108px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: var(--mono-radius-sm);
+  font-weight: 600;
+}
+
 .form-layout-designer__form {
   padding: 20px;
+}
+
+.form-layout-designer__shell--modal .form-layout-designer__form {
+  padding: 30px 28px 18px;
 }
 
 .form-layout-designer__canvas {
@@ -1193,10 +1410,10 @@ function clampNumber(value: number, min: number, max: number) {
   min-width: 0;
   padding: 0;
   background: transparent;
-  cursor: grab;
+  cursor: pointer;
 }
 
-.form-layout-designer__item.is-dragging {
+.form-layout-designer--dragging .form-layout-designer__item {
   cursor: grabbing;
 }
 
@@ -1237,6 +1454,14 @@ function clampNumber(value: number, min: number, max: number) {
 .form-layout-designer__item--insert-after::before {
   right: -9px;
   background: #111111;
+}
+
+.form-layout-designer__item--new-row-before {
+  box-shadow: 0 -3px 0 #111111;
+}
+
+.form-layout-designer__item--new-row-after {
+  box-shadow: 0 3px 0 #111111;
 }
 
 .form-layout-designer__item--hidden {
@@ -1321,8 +1546,9 @@ function clampNumber(value: number, min: number, max: number) {
   border-radius: 999px;
   background: transparent;
   cursor: ew-resize;
-  opacity: 0.28;
+  opacity: 0;
   transition: opacity 0.2s ease;
+  z-index: 3;
 }
 
 .form-layout-designer__resize-edge::before {
@@ -1369,8 +1595,86 @@ function clampNumber(value: number, min: number, max: number) {
     padding: 16px;
   }
 
+  .form-layout-designer__shell--modal .form-layout-designer__form {
+    padding: 24px 20px 12px;
+  }
+
+  .form-layout-designer__modal-header {
+    padding: 24px 20px 0;
+  }
+
+  .form-layout-designer__modal-footer {
+    padding: 20px 20px 22px;
+  }
+
   .form-layout-designer__row {
     gap: 0 12px;
   }
+}
+</style>
+
+<style>
+html.dark .form-layout-designer__drag-ghost,
+html.dark .form-layout-designer__toolbar,
+html.dark .form-layout-designer .designer-chip,
+html.dark .form-layout-designer .designer-chip--ghost,
+html.dark .form-layout-designer__shell {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--mono-text) !important;
+  box-shadow: none !important;
+}
+
+html.dark .form-layout-designer__shell--modal {
+  background: #1f1f1f !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+html.dark .form-layout-designer__modal-header h3,
+html.dark .form-layout-designer__toolbar-copy strong {
+  color: var(--mono-text) !important;
+}
+
+html.dark .form-layout-designer__modal-close,
+html.dark .form-layout-designer__toolbar-copy span,
+html.dark .form-layout-designer__range span {
+  color: var(--mono-text-secondary) !important;
+}
+
+html.dark .form-layout-designer__row-gap--active,
+html.dark .form-layout-designer__row--active,
+html.dark .form-layout-designer__item:hover::after,
+html.dark .form-layout-designer__item--selected::after {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+html.dark .form-layout-designer__item--insert-before::before,
+html.dark .form-layout-designer__item--insert-after::before {
+  background-color: rgba(255, 255, 255, 0.78) !important;
+}
+
+html.dark .form-layout-designer__item--new-row-before {
+  box-shadow: 0 -3px 0 rgba(255, 255, 255, 0.78) !important;
+}
+
+html.dark .form-layout-designer__item--new-row-after {
+  box-shadow: 0 3px 0 rgba(255, 255, 255, 0.78) !important;
+}
+
+html.dark .form-layout-designer__resize {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 46%,
+    rgba(255, 255, 255, 0.44) 46%,
+    rgba(255, 255, 255, 0.44) 58%,
+    rgba(255, 255, 255, 0) 58%,
+    rgba(255, 255, 255, 0) 100%
+  ) !important;
+}
+
+html.dark .form-layout-designer__resize-edge::before {
+  background: rgba(255, 255, 255, 0.34) !important;
 }
 </style>

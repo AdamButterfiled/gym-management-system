@@ -277,3 +277,34 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.18);
 }
 </style>
+
+<style>
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input {
+  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--mono-control-text) !important;
+  box-shadow: none !important;
+}
+
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input:hover,
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input:focus,
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input:focus-within {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: none !important;
+}
+
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input-control {
+  color: var(--mono-control-text) !important;
+}
+
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input-control::placeholder {
+  color: var(--mono-text-tertiary) !important;
+}
+
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input-prefix,
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input:hover .std-input-prefix,
+html.dark .table-search-toolbar--menu-list .toolbar-keyword-input .std-input:focus-within .std-input-prefix {
+  color: var(--mono-text-secondary) !important;
+}
+</style>

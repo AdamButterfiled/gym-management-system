@@ -54,6 +54,10 @@ html.theme-glass-global:not(.dark) .glass-container {
 }
 
 html.dark .glass-container {
-  background: rgba(20, 20, 20, 0.9);
+  background: #1f1f1f;
+}
+
+html.dark .glass-container--table {
+  background: transparent;
 }
 </style>

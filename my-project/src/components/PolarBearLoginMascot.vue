@@ -30,6 +30,7 @@
           :style="introMotionStyle"
         >
           <img
+            :key="animationAssetKey"
             :src="currentModeAsset"
             alt="polar bear intro animation frame"
             class="bear-asset sequence-asset"
@@ -57,18 +58,11 @@
           class="sequence-frame-wrap"
         >
           <img
+            :key="animationAssetKey"
             :src="currentModeAsset"
             :alt="currentModeAlt"
             class="bear-asset sequence-asset"
           />
-          <svg
-            v-if="activeModeKey === 'password' && currentSequenceFrameIndex >= PASSWORD_TRANSITION_END_FRAME"
-            class="password-foot-arc"
-            viewBox="0 0 570 592"
-            aria-hidden="true"
-          >
-            <path d="M 160 516 C 175 528 205 528 226 514" />
-          </svg>
         </div>
       </div>
     </div>
@@ -76,13 +70,17 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import coverPeekAsset from '@/assets/bear/generated-cv/transparent-svg/cover-peek.svg';
 import errorSadAsset from '@/assets/bear/generated-cv/transparent-svg/error-sad.svg';
 import idleBlinkOverlayAsset from '@/assets/bear/generated-cv/transparent-svg/idle-eye-blink-overlay.svg';
 import idleOpenAsset from '@/assets/bear/generated-cv/transparent-svg/idle-open.svg';
 import successLiftAsset from '@/assets/bear/generated-cv/transparent-svg/success-lift.svg';
 import sequenceManifest from '@/assets/bear/generated-cv/video-sequences/manifest.json';
+import errorAnimationAsset from '@/assets/bear/generated-cv/video-sequences/animated/error.webp';
+import idleInteractAnimationAsset from '@/assets/bear/generated-cv/video-sequences/animated/idleInteract.webp';
+import introAnimationAsset from '@/assets/bear/generated-cv/video-sequences/animated/intro.webp';
+import successAnimationAsset from '@/assets/bear/generated-cv/video-sequences/animated/success.webp';
 
 function loadSequence(modules) {
   return Object.entries(modules)
@@ -90,34 +88,21 @@ function loadSequence(modules) {
     .map(([, value]) => value);
 }
 
-const introFrameSources = loadSequence(
-  import.meta.glob('../assets/bear/generated-cv/video-sequences/intro/frame-*.svg', { eager: true, import: 'default' })
-);
-const idleInteractFrameSources = loadSequence(
-  import.meta.glob('../assets/bear/generated-cv/video-sequences/idleInteract/frame-*.svg', { eager: true, import: 'default' })
-);
 const passwordFrameSources = loadSequence(
   import.meta.glob('../assets/bear/generated-cv/video-sequences/password/frame-*.svg', { eager: true, import: 'default' })
 );
-const errorFrameSources = loadSequence(
-  import.meta.glob('../assets/bear/generated-cv/video-sequences/error/frame-*.svg', { eager: true, import: 'default' })
-);
-const successFrameSources = loadSequence(
-  import.meta.glob('../assets/bear/generated-cv/video-sequences/success/frame-*.svg', { eager: true, import: 'default' })
-);
 
-const sequenceSourcesByMode = {
-  intro: introFrameSources,
-  idleInteract: idleInteractFrameSources,
-  password: passwordFrameSources,
-  error: errorFrameSources,
-  success: successFrameSources
+const animationAssetByMode = {
+  intro: introAnimationAsset,
+  idleInteract: idleInteractAnimationAsset,
+  error: errorAnimationAsset,
+  success: successAnimationAsset
 };
 
 const fallbackAssetByMode = {
-  intro: introFrameSources[introFrameSources.length - 1] || idleOpenAsset,
+  intro: idleOpenAsset,
   idle: idleOpenAsset,
-  password: passwordFrameSources[0] || coverPeekAsset,
+  password: passwordFrameSources[passwordFrameSources.length - 1] || coverPeekAsset,
   error: errorSadAsset,
   success: successLiftAsset
 };
@@ -147,9 +132,10 @@ const props = defineProps({
 
 const emit = defineEmits(['intro-complete', 'success-cycle-complete', 'error-cycle-complete', 'double-click']);
 
-const currentSequenceFrameIndex = ref(0);
+const animationPlaybackKey = ref(0);
 const idleInteractActive = ref(false);
 const idleBlinkVisible = ref(false);
+const passwordFrameIndex = ref(0);
 
 const activeModeKey = computed(() => {
   if (props.mode === 'idle' && idleInteractActive.value) {
@@ -159,21 +145,28 @@ const activeModeKey = computed(() => {
   return props.mode;
 });
 
-const currentSequenceSources = computed(() => sequenceSourcesByMode[activeModeKey.value] || []);
-
 const currentModeAsset = computed(() => {
-  const sources = currentSequenceSources.value;
-  if (sources.length) {
-    const clampedIndex = Math.min(currentSequenceFrameIndex.value, sources.length - 1);
-    return sources[clampedIndex];
+  if (activeModeKey.value === 'password') {
+    return passwordFrameSources[Math.min(passwordFrameIndex.value, passwordFrameSources.length - 1)]
+      || fallbackAssetByMode.password;
+  }
+
+  if (!props.reducedMotion) {
+    const animationAsset = animationAssetByMode[activeModeKey.value];
+    if (animationAsset) {
+      return animationAsset;
+    }
   }
 
   return fallbackAssetByMode[activeModeKey.value] || fallbackAssetByMode[props.mode] || idleOpenAsset;
 });
 
 const introMotionStyle = computed(() => ({
-  '--intro-duration': `${Math.max(currentSequenceDurationMs.value, 160)}ms`
+  '--intro-duration': `${Math.max(currentSequenceDurationMs.value, 160)}ms`,
+  '--intro-steps': String(Math.max(getSequenceFrameCount('intro'), 1))
 }));
+
+const animationAssetKey = computed(() => `${activeModeKey.value}-${animationPlaybackKey.value}`);
 
 const currentModeAlt = computed(() => {
   if (props.mode === 'idle') return 'polar bear idle animation frame';
@@ -185,13 +178,7 @@ const currentModeAlt = computed(() => {
 });
 
 const currentSequenceDurationMs = computed(() => {
-  const meta = sequenceManifest.sequences?.[activeModeKey.value];
-  const frameCount = Number(meta?.frameCount || currentSequenceSources.value.length || 0);
-  const fps = Number(meta?.fps || 24);
-  const duration = frameCount > 0 ? (frameCount / Math.max(fps, 1)) * 1000 : 0;
-  return activeModeKey.value === 'intro'
-    ? duration / INTRO_SPEED_MULTIPLIER
-    : duration;
+  return getSequenceDurationMs(activeModeKey.value);
 });
 
 let sequenceTimer = 0;
@@ -199,8 +186,26 @@ let completeTimer = 0;
 let idlePauseTimer = 0;
 
 const INTRO_SPEED_MULTIPLIER = 1.35;
-const PASSWORD_TRANSITION_END_FRAME = 18;
-const PASSWORD_LOOP_TAIL_LENGTH = 10;
+
+function getSequenceMeta(mode) {
+  return sequenceManifest.sequences?.[mode] || {};
+}
+
+function getSequenceFrameCount(mode) {
+  return Number(getSequenceMeta(mode).frameCount || 0);
+}
+
+function getSequenceFps(mode) {
+  return Math.max(Number(getSequenceMeta(mode).fps || 24), 1);
+}
+
+function getSequenceDurationMs(mode) {
+  const frameCount = getSequenceFrameCount(mode);
+  const duration = frameCount > 0 ? (frameCount / getSequenceFps(mode)) * 1000 : 0;
+  return mode === 'intro'
+    ? duration / INTRO_SPEED_MULTIPLIER
+    : duration;
+}
 
 function clearTimer(timerId) {
   if (timerId) {
@@ -214,7 +219,30 @@ function clearAllTimers() {
   clearTimer(idlePauseTimer);
 }
 
-function nextIdleBlinkDelay() {
+function restartAnimatedAsset() {
+  animationPlaybackKey.value += 1;
+}
+
+const preloadedPasswordImages = [];
+
+function preloadPasswordFrames() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  passwordFrameSources.forEach((source) => {
+    const image = new Image();
+    image.decoding = 'async';
+    image.src = source;
+    preloadedPasswordImages.push(image);
+  });
+}
+
+function nextIdleBlinkDelay(immediate = false) {
+  if (immediate) {
+    return 520 + Math.random() * 260;
+  }
+
   return 2800 + Math.random() * 1400;
 }
 
@@ -222,14 +250,14 @@ function playIdleSequence() {
   clearAllTimers();
   idleInteractActive.value = false;
   idleBlinkVisible.value = false;
-  currentSequenceFrameIndex.value = 0;
+  passwordFrameIndex.value = 0;
 
   if (props.reducedMotion) {
     return;
   }
   const blinkDuration = 120;
 
-  const scheduleNextBlink = () => {
+  const scheduleNextBlink = (immediate = false) => {
     idlePauseTimer = window.setTimeout(() => {
       if (props.mode !== 'idle' || idleInteractActive.value) {
         return;
@@ -243,50 +271,32 @@ function playIdleSequence() {
           scheduleNextBlink();
         }
       }, blinkDuration);
-    }, nextIdleBlinkDelay());
+    }, nextIdleBlinkDelay(immediate));
   };
 
-  scheduleNextBlink();
+  scheduleNextBlink(true);
 }
 
 function playIdleInteractSequence() {
   clearAllTimers();
   idleInteractActive.value = true;
   idleBlinkVisible.value = false;
-  currentSequenceFrameIndex.value = 0;
-
-  const sources = sequenceSourcesByMode.idleInteract;
-  if (!sources?.length) {
-    idleInteractActive.value = false;
-    playIdleSequence();
-    return;
-  }
+  passwordFrameIndex.value = 0;
+  restartAnimatedAsset();
 
   if (props.reducedMotion) {
     idleInteractActive.value = false;
-    currentSequenceFrameIndex.value = 0;
     return;
   }
 
-  const fps = Number(sequenceManifest.sequences?.idleInteract?.fps || 24);
-  const frameDuration = 1000 / Math.max(fps, 1);
-
-  const advanceFrame = () => {
+  sequenceTimer = window.setTimeout(() => {
     if (props.mode !== 'idle' || !idleInteractActive.value) {
       return;
     }
 
-    if (currentSequenceFrameIndex.value >= sources.length - 1) {
-      idleInteractActive.value = false;
-      playIdleSequence();
-      return;
-    }
-
-    currentSequenceFrameIndex.value += 1;
-    sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
-  };
-
-  sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
+    idleInteractActive.value = false;
+    playIdleSequence();
+  }, Math.max(getSequenceDurationMs('idleInteract'), 160));
 }
 
 function handleIdleInteract() {
@@ -294,7 +304,7 @@ function handleIdleInteract() {
     return;
   }
 
-  if (!sequenceSourcesByMode.idleInteract?.length) {
+  if (!animationAssetByMode.idleInteract) {
     return;
   }
 
@@ -308,55 +318,34 @@ function handleBearDoubleClick() {
 function playPasswordSequence() {
   clearAllTimers();
   idleBlinkVisible.value = false;
-  currentSequenceFrameIndex.value = 0;
+  idleInteractActive.value = false;
+  passwordFrameIndex.value = 0;
 
-  const sources = sequenceSourcesByMode.password;
-  if (!sources?.length) {
+  if (!passwordFrameSources.length) {
     return;
   }
-
-  const transitionEnd = Math.min(PASSWORD_TRANSITION_END_FRAME, sources.length - 1);
-  const loopStart = Math.min(
-    Math.max(transitionEnd, sources.length - PASSWORD_LOOP_TAIL_LENGTH),
-    sources.length - 1
-  );
-  const loopEnd = sources.length - 1;
 
   if (props.reducedMotion) {
-    currentSequenceFrameIndex.value = loopStart;
+    passwordFrameIndex.value = passwordFrameSources.length - 1;
     return;
   }
 
-  const fps = Number(sequenceManifest.sequences?.password?.fps || 24);
-  const frameDuration = 1000 / Math.max(fps, 1);
+  const frameDuration = 1000 / getSequenceFps('password');
 
-  const advanceFrame = () => {
+  const advancePasswordFrame = () => {
     if (props.mode !== 'password') {
       return;
     }
 
-    if (currentSequenceFrameIndex.value < transitionEnd) {
-      currentSequenceFrameIndex.value += 1;
-      sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
+    if (passwordFrameIndex.value >= passwordFrameSources.length - 1) {
       return;
     }
 
-    if (loopStart >= loopEnd) {
-      currentSequenceFrameIndex.value = loopStart;
-      sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
-      return;
-    }
-
-    if (currentSequenceFrameIndex.value < loopStart || currentSequenceFrameIndex.value >= loopEnd) {
-      currentSequenceFrameIndex.value = loopStart;
-    } else {
-      currentSequenceFrameIndex.value += 1;
-    }
-
-    sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
+    passwordFrameIndex.value += 1;
+    sequenceTimer = window.setTimeout(advancePasswordFrame, frameDuration);
   };
 
-  sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
+  sequenceTimer = window.setTimeout(advancePasswordFrame, frameDuration);
 }
 
 function emitSequenceComplete(mode) {
@@ -374,10 +363,12 @@ function emitSequenceComplete(mode) {
 function playSequence(mode) {
   clearAllTimers();
   idleBlinkVisible.value = false;
-  currentSequenceFrameIndex.value = 0;
+  idleInteractActive.value = false;
+  passwordFrameIndex.value = 0;
+  restartAnimatedAsset();
 
-  const sources = sequenceSourcesByMode[mode];
-  if (!sources?.length) {
+  const animationAsset = animationAssetByMode[mode];
+  if (!animationAsset) {
     if (mode === 'intro' || mode === 'success' || mode === 'error') {
       completeTimer = window.setTimeout(() => emitSequenceComplete(mode), 120);
     }
@@ -385,32 +376,19 @@ function playSequence(mode) {
   }
 
   if (props.reducedMotion) {
-    currentSequenceFrameIndex.value = mode === 'idle' ? 0 : sources.length - 1;
     if (mode === 'intro' || mode === 'success' || mode === 'error') {
       completeTimer = window.setTimeout(() => emitSequenceComplete(mode), 160);
     }
     return;
   }
 
-  const fps = Number(sequenceManifest.sequences?.[mode]?.fps || 24);
-  const playbackRate = mode === 'intro' ? INTRO_SPEED_MULTIPLIER : 1;
-  const frameDuration = (1000 / Math.max(fps, 1)) / playbackRate;
-
-  const advanceFrame = () => {
+  sequenceTimer = window.setTimeout(() => {
     if (props.mode !== mode) {
       return;
     }
 
-    if (currentSequenceFrameIndex.value >= sources.length - 1) {
-      emitSequenceComplete(mode);
-      return;
-    }
-
-    currentSequenceFrameIndex.value += 1;
-    sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
-  };
-
-  sequenceTimer = window.setTimeout(advanceFrame, frameDuration);
+    emitSequenceComplete(mode);
+  }, Math.max(getSequenceDurationMs(mode), 160));
 }
 
 watch(
@@ -430,6 +408,7 @@ watch(
     clearAllTimers();
     idleInteractActive.value = false;
     idleBlinkVisible.value = false;
+    passwordFrameIndex.value = 0;
 
     if (mode === 'password') {
       playPasswordSequence();
@@ -445,6 +424,10 @@ watch(
   },
   { immediate: true }
 );
+
+onMounted(() => {
+  preloadPasswordFrames();
+});
 
 onBeforeUnmount(() => {
   clearAllTimers();
@@ -549,6 +532,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   filter: drop-shadow(0 28px 34px rgba(17, 17, 17, 0.14));
   transform-origin: center bottom;
+  backface-visibility: hidden;
 }
 
 .intro-sequence-wrap {
@@ -556,7 +540,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  animation: intro-run-in var(--intro-duration, 5000ms) cubic-bezier(0.2, 0.78, 0.22, 1) both;
+  animation: intro-run-in var(--intro-duration, 5000ms) steps(var(--intro-steps, 121), end) both;
   will-change: transform;
 }
 
@@ -592,31 +576,8 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-.password-foot-arc {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.password-foot-arc path {
-  fill: none;
-  stroke: #010101;
-  stroke-width: 1.35;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.96;
-}
-
-.cover-asset {
-  width: min(470px, 82%);
-}
-
 .is-reduced-motion .bear-layer,
 .is-reduced-motion .intro-sequence-wrap,
-.is-reduced-motion .cover-asset,
 .is-reduced-motion .sequence-asset {
   animation: none !important;
 }
